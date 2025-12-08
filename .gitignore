@@ -1,0 +1,99 @@
+# =========================
+# SplitBoy / SplitRipper .gitignore
+# =========================
+# Rationale:
+# - This project is an Electron app with a bundled Python runtime created by build scripts.
+# - All build outputs and generated/bundled runtimes should not be committed to Git.
+# - Keep only source code, configs, and assets needed to build/package the app.
+
+# macOS junk
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# OS / editor / IDE
+Thumbs.db
+.vscode/
+.idea/
+*.iml
+
+# Node/Electron
+node_modules/
+dist/
+out/
+release/
+installer/
+.nyc_output/
+coverage/
+.eslintcache
+.parcel-cache/
+.next/
+.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Electron builder outputs (dist covers these but keep common file types too)
+*.dmg
+*.exe
+*.AppImage
+*.snap
+*.deb
+*.rpm
+*.zip
+*.tar.gz
+*.tgz
+*.pkg
+*.app
+
+# Python general
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.so
+*.egg
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.tox/
+.venv/
+venv/
+env/
+ENV/
+pip-wheel-metadata/
+.python-version
+
+# Generated Python runtime bundles and artifacts (created by bundle scripts)
+python_runtime/
+python_runtime_bundle/
+
+# Transient archives and downloads used by bundling scripts
+ffmpeg.zip
+ffprobe.zip
+python-embed.zip
+pbs.tar.gz
+pbs.tar.zst
+get-pip.py
+
+# App logs (most live in Electron userData outside the repo, but ignore any local logs)
+logs/
+*.log
+
+# Build cache (electron-builder cache is in user home, but ignore any local)
+.electron-builder/
+
+# Optional: If you do NOT want large model files tracked in Git history, consider Git LFS.
+# The app can copy models from src/pretrained_models into the runtime bundle at build-time if present.
+# If you move them to LFS (recommended), uncomment the lines below and run the Git LFS commands provided later.
+# NOTE: If you ignore these here without migrating, your packaged app may not include models unless the app downloads them at runtime.
+# src/pretrained_models/
+# src/pretrained_models/**/*.ckpt
+# src/pretrained_models/**/*.pt
+# src/pretrained_models/**/*.onnx
+# src/pretrained_models/**/*.pb
+# src/pretrained_models/**/model.data-00000-of-00001
+# src/pretrained_models/**/*.index
+# src/pretrained_models/**/*.meta

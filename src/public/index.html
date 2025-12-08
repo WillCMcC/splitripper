@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SplitBoy - Audio Stem Separator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link href="/static/styles.css" rel="stylesheet" />
+  </head>
+  <body>
+    <div class="drag-bar" aria-hidden="true"></div>
+    <header>
+      <h1>SplitBoy</h1>
+    </header>
+
+    <main>
+      <section class="left">
+        <nav class="tabs">
+          <button class="tab-button active" data-tab="local-files">
+            Local Files
+          </button>
+          <button class="tab-button" data-tab="search">Search</button>
+          <button class="tab-button" data-tab="settings">Settings</button>
+        </nav>
+
+        <div class="tab-content" id="search-tab">
+          <h2>Search YouTube</h2>
+          <div class="row">
+            <input
+              id="search-query"
+              type="text"
+              placeholder="Search YouTube..."
+            />
+            <button id="btn-search" class="secondary">Search</button>
+          </div>
+          <div class="row">
+            <input id="playlist-url" type="text" placeholder="Playlist URL" />
+            <button id="btn-playlist" class="secondary">Load playlist</button>
+          </div>
+          <div class="row">
+            <button id="btn-add-all" class="secondary" style="display: none">
+              Add all to queue
+            </button>
+            <span id="results-meta" class="muted"></span>
+          </div>
+          <div id="results" class="list"></div>
+        </div>
+
+        <div class="tab-content active" id="local-files-tab">
+          <div class="tab-header">
+            <div class="tab-title-section">
+              <h2>Local Files</h2>
+              <p class="muted">Add local audio files</p>
+            </div>
+            <button id="btn-choose-folder" class="secondary choose-folder-btn">
+              Choose Folder
+            </button>
+          </div>
+
+          <div class="row local-select-row">
+            <div id="drop-zone" class="drop-zone" aria-label="Drop audio files">
+              Drop tracks • Click to browse
+            </div>
+          </div>
+
+          <div class="row">
+            <button
+              id="btn-add-local-all"
+              class="secondary"
+              style="display: none"
+            >
+              Add all to queue
+            </button>
+            <span id="local-files-meta" class="muted"></span>
+          </div>
+
+          <div id="local-files-list" class="list"></div>
+        </div>
+
+        <div class="tab-content" id="settings-tab">
+          <h2>Settings</h2>
+          <div class="row">
+            <label>
+              Output folder:
+              <div class="file-picker-container">
+                <input
+                  id="cfg-output"
+                  type="text"
+                  placeholder="Click Browse to select folder..."
+                />
+                <input
+                  id="cfg-output-file-input"
+                  type="file"
+                  webkitdirectory
+                  multiple
+                  style="display: none"
+                />
+                <button id="cfg-output-browse" type="button" class="secondary">
+                  Browse
+                </button>
+              </div>
+            </label>
+          </div>
+          <div class="row">
+            <span id="config-status" class="muted"></span>
+          </div>
+
+          <h3>yt-dlp</h3>
+          <div class="row ytdlp-status-row">
+            <span id="ytdlp-version" class="muted">Checking version...</span>
+            <button id="btn-ytdlp-update" class="secondary">Update yt-dlp</button>
+          </div>
+          <div class="row">
+            <span id="ytdlp-update-status" class="muted"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="right">
+        <div class="queue-container">
+          <h2>Queue</h2>
+          <div class="row">
+            <div class="progress">
+              <div id="global-progress-bar" class="bar" style="width: 0%"></div>
+            </div>
+            <span id="concurrency-status" class="muted">active 0 / 6</span>
+            <span id="global-progress-text" class="muted">0%</span>
+          </div>
+          <div class="row queue-controls-row">
+            <div class="btn-group">
+              <button id="btn-start" class="secondary">Start</button>
+              <button id="btn-stop" class="secondary">Stop</button>
+              <button id="btn-clear" class="secondary">Clear</button>
+              <button id="btn-retry-all" class="secondary">
+                Retry all failed
+              </button>
+            </div>
+          </div>
+          <div class="row queue-counts-row">
+            <span id="queue-counts" class="muted"></span>
+          </div>
+          <div id="queue" class="queue"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/static/app.js" type="module"></script>
+  </body>
+</html>

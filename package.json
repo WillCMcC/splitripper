@@ -1,0 +1,72 @@
+{
+  "name": "splitboy",
+  "version": "1.0.0",
+  "description": "An Electron desktop app that downloads audio from YouTube and separates it into vocal and instrumental tracks using Demucs.",
+  "main": "main.js",
+  "scripts": {
+    "electron": "electron .",
+    "electron-dev": "NODE_ENV=development electron .",
+    "prebuild": "node bundle-python.js",
+    "predist": "node bundle-python.js",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish=never",
+    "start": "npm run electron",
+    "bundle-python": "node bundle-python.js",
+    "test": "python3 -m pytest tests/ -v",
+    "test:quick": "python3 -m pytest tests/ -q"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^37.3.1",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.splitboy.app",
+    "productName": "SplitBoy",
+    "directories": {
+      "output": "dist"
+    },
+    "asar": false,
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "node_modules/**/*",
+      "package.json",
+      "splitro.png",
+      "python_runtime_bundle/**/*",
+      "requirements.txt"
+    ],
+    "asarUnpack": [
+      "python_runtime_bundle/**/*"
+    ],
+    "icon": "splitro.png",
+    "afterPack": "scripts/afterPack.js",
+    "mac": {
+      "category": "public.app-category.music",
+      "minimumSystemVersion": "14.0",
+      "extendInfo": {
+        "LSMinimumSystemVersion": "14.0"
+      },
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "target": [
+        "dir",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "dependencies": {
+    "tree-kill": "^1.2.2"
+  }
+}
