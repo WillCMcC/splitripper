@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(python -m pip show:*)",
+      "Bash(python:*)",
+      "Bash(yt-dlp:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(lsof:*)",
+      "Bash(pkill:*)",
+      "WebSearch",
+      "Bash(npm install:*)",
+      "Bash(kill:*)",
+      "Bash(python3:*)",
+      "Bash(pip3 install:*)",
+      "Bash(du:*)",
+      "Bash(grep:*)",
+      "Bash(/Users/will/Code/splitripper/python_runtime_bundle/python:*)",
+      "Bash(curl:*)",
+      "Bash(/Users/will/Code/splitripper/python_runtime_bundle/pbs/python/bin/python3:*)",
+      "Skill(claude-md-writer)",
+      "Bash(mkdir:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
