@@ -161,4 +161,17 @@ exports.default = async function afterPack(context) {
   } catch (e) {
     // ignore
   }
+
+  // Ad-hoc sign the entire .app bundle so macOS shows "Open Anyway" instead of "damaged"
+  const appPath = path.join(appOutDir, "SplitBoy.app");
+  try {
+    console.log("[afterPack] Ad-hoc signing entire app bundle...");
+    execSync(
+      `codesign --deep --force --sign - "${appPath}"`,
+      { stdio: "pipe" }
+    );
+    console.log("[afterPack] App bundle signed successfully");
+  } catch (e) {
+    console.warn("[afterPack] App bundle signing failed:", e.message);
+  }
 };
