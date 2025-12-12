@@ -92,22 +92,38 @@ function downloadFFmpeg(targetDir) {
   console.log("Downloading ffmpeg binaries...");
 
   if (platform === "darwin") {
-    // macOS - Download ffmpeg from evermeet.cx (static builds)
+    // macOS - Download ffmpeg based on architecture
+    // arm64 builds from martin-riedl.de, x86_64 from evermeet.cx
     try {
-      const ffmpegUrl = "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip";
-      const ffprobeUrl = "https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip";
+      if (arch === "arm64") {
+        // Apple Silicon - use martin-riedl.de builds
+        const ffmpegUrl = "https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffmpeg.zip";
+        const ffprobeUrl = "https://ffmpeg.martin-riedl.de/redirect/latest/macos/arm64/release/ffprobe.zip";
 
-      console.log("Downloading ffmpeg for macOS...");
-      execSync(`curl -L -o ffmpeg.zip "${ffmpegUrl}"`, { stdio: "inherit" });
-      execSync(`unzip -o ffmpeg.zip -d "${ffmpegDir}"`, { stdio: "inherit" });
-      fs.unlinkSync("ffmpeg.zip");
+        console.log("Downloading ffmpeg for macOS (arm64)...");
+        execSync(`curl -L -o ffmpeg.zip "${ffmpegUrl}"`, { stdio: "inherit" });
+        execSync(`unzip -o ffmpeg.zip -d "${ffmpegDir}"`, { stdio: "inherit" });
+        fs.unlinkSync("ffmpeg.zip");
 
-      console.log("Downloading ffprobe for macOS...");
-      execSync(`curl -L -o ffprobe.zip "${ffprobeUrl}"`, { stdio: "inherit" });
-      execSync(`unzip -o ffprobe.zip -d "${ffmpegDir}"`, {
-        stdio: "inherit",
-      });
-      fs.unlinkSync("ffprobe.zip");
+        console.log("Downloading ffprobe for macOS (arm64)...");
+        execSync(`curl -L -o ffprobe.zip "${ffprobeUrl}"`, { stdio: "inherit" });
+        execSync(`unzip -o ffprobe.zip -d "${ffmpegDir}"`, { stdio: "inherit" });
+        fs.unlinkSync("ffprobe.zip");
+      } else {
+        // Intel Mac - use evermeet.cx builds
+        const ffmpegUrl = "https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip";
+        const ffprobeUrl = "https://evermeet.cx/ffmpeg/getrelease/ffprobe/zip";
+
+        console.log("Downloading ffmpeg for macOS (x86_64)...");
+        execSync(`curl -L -o ffmpeg.zip "${ffmpegUrl}"`, { stdio: "inherit" });
+        execSync(`unzip -o ffmpeg.zip -d "${ffmpegDir}"`, { stdio: "inherit" });
+        fs.unlinkSync("ffmpeg.zip");
+
+        console.log("Downloading ffprobe for macOS (x86_64)...");
+        execSync(`curl -L -o ffprobe.zip "${ffprobeUrl}"`, { stdio: "inherit" });
+        execSync(`unzip -o ffprobe.zip -d "${ffmpegDir}"`, { stdio: "inherit" });
+        fs.unlinkSync("ffprobe.zip");
+      }
 
       // Make them executable
       fs.chmodSync(path.join(ffmpegDir, "ffmpeg"), "755");
