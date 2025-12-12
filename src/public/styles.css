@@ -830,25 +830,15 @@ input[type="number"]:focus {
   overflow-x: hidden;
 }
 
-/* Scrollbar styling (WebKit) */
+/* Hide scrollbars but keep scroll functionality */
+.list,
+.queue {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
 .list::-webkit-scrollbar,
 .queue::-webkit-scrollbar {
-  width: 6px;
-}
-.list::-webkit-scrollbar-track,
-.queue::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 999px;
-}
-.list::-webkit-scrollbar-thumb,
-.queue::-webkit-scrollbar-thumb {
-  background: rgba(56, 71, 94, 0.3);
-  border-radius: 999px;
-  border: none;
-}
-.list::-webkit-scrollbar-thumb:hover,
-.queue::-webkit-scrollbar-thumb:hover {
-  background: rgba(56, 71, 94, 0.5);
+  display: none; /* Chrome/Safari/Opera */
 }
 
 /* Controls row: keep default horizontal layout from .row */

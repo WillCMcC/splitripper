@@ -59,6 +59,22 @@ BASE_DIR = Path(__file__).parent.resolve()
 PUBLIC_DIR = BASE_DIR / "public"
 CONFIG_PATH = BASE_DIR / "config.json"
 
+# Log ffmpeg path resolution for debugging
+_ffmpeg_dir = BASE_DIR.parent / "python_runtime_bundle" / "ffmpeg"
+_ffmpeg_bin = _ffmpeg_dir / "ffmpeg"
+logger.info(f"BASE_DIR: {BASE_DIR}")
+logger.info(f"ffmpeg_dir: {_ffmpeg_dir}")
+logger.info(f"ffmpeg_dir exists: {_ffmpeg_dir.exists()}")
+logger.info(f"ffmpeg binary exists: {_ffmpeg_bin.exists()}")
+if _ffmpeg_bin.exists():
+    try:
+        result = subprocess.run([str(_ffmpeg_bin), "-version"], capture_output=True, text=True, timeout=5)
+        logger.info(f"ffmpeg executable: {result.returncode == 0}")
+        if result.returncode != 0:
+            logger.error(f"ffmpeg stderr: {result.stderr[:200]}")
+    except Exception as e:
+        logger.error(f"ffmpeg execution test failed: {e}")
+
 # Initialize configuration
 config = Config(CONFIG_PATH)
 app_state.set_config(config.as_dict())
@@ -474,8 +490,12 @@ def _process_youtube_item(item: QueueItem) -> None:
 
         # Add ffmpeg location if bundled
         ffmpeg_dir = BASE_DIR.parent / "python_runtime_bundle" / "ffmpeg"
+        logger.info(f"yt-dlp ffmpeg_dir check: {ffmpeg_dir} exists={ffmpeg_dir.exists()}")
         if ffmpeg_dir.exists():
             ydl_opts["ffmpeg_location"] = str(ffmpeg_dir)
+            logger.info(f"yt-dlp ffmpeg_location set to: {ffmpeg_dir}")
+        else:
+            logger.warning(f"ffmpeg_dir not found, yt-dlp will use system ffmpeg")
 
         # Download
         rc_ok = True
