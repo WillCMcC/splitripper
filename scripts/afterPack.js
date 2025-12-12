@@ -1,8 +1,8 @@
 /**
  * Electron-Builder afterPack hook.
  * - Ensures bundled executables are chmod +x
+ * - Ad-hoc signs bundled binaries (ffmpeg, ffprobe) so they pass Gatekeeper
  * - Logs dylib dependencies for sanity checking (detects accidental Homebrew links)
- * - Prepares the app bundle for local QA (does not codesign)
  *
  * Note: This does NOT modify install names or rpaths. With python-build-standalone or a fully
  * in-bundle venv, that shouldn't be necessary. If you later need to patch dylibs,
@@ -17,6 +17,21 @@ function safeChmod(p, mode) {
     if (fs.existsSync(p)) fs.chmodSync(p, mode);
   } catch (e) {
     console.warn("chmod failed:", p, e.message);
+  }
+}
+
+/**
+ * Ad-hoc sign a binary so it passes Gatekeeper on other Macs.
+ * This doesn't require a paid Apple Developer certificate.
+ */
+function adhocSign(p) {
+  try {
+    if (fs.existsSync(p)) {
+      execSync(`codesign --force --sign - "${p}"`, { stdio: "pipe" });
+      console.log(`[afterPack] Ad-hoc signed: ${path.basename(p)}`);
+    }
+  } catch (e) {
+    console.warn(`[afterPack] Ad-hoc sign failed for ${p}:`, e.message);
   }
 }
 
@@ -61,6 +76,10 @@ exports.default = async function afterPack(context) {
   safeChmod(pyWrapper, 0o755);
   safeChmod(ffmpeg, 0o755);
   safeChmod(ffprobe, 0o755);
+
+  // Ad-hoc sign bundled binaries so they pass Gatekeeper on other Macs
+  adhocSign(ffmpeg);
+  adhocSign(ffprobe);
 
   // If a venv exists, also make sure python binaries are exec
   const venvPy = path.join(
