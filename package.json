@@ -46,6 +46,7 @@
     "icon": "splitboy_icon.png",
     "afterPack": "scripts/afterPack.js",
     "mac": {
+      "artifactName": "${productName}-${arch}-mac.${ext}",
       "category": "public.app-category.music",
       "minimumSystemVersion": "14.0",
       "extendInfo": {
