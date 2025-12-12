@@ -830,15 +830,16 @@ input[type="number"]:focus {
   overflow-x: hidden;
 }
 
-/* Hide scrollbars but keep scroll functionality */
-.list,
-.queue {
+/* Hide all scrollbars but keep scroll functionality */
+* {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
 }
-.list::-webkit-scrollbar,
-.queue::-webkit-scrollbar {
+*::-webkit-scrollbar {
   display: none; /* Chrome/Safari/Opera */
+  width: 0;
+  height: 0;
+  background: transparent;
 }
 
 /* Controls row: keep default horizontal layout from .row */
