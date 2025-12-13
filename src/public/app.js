@@ -2034,21 +2034,32 @@ function renderModelSelector(data) {
 
   newSelect.addEventListener("change", async () => {
     const model = newSelect.value;
-    try {
-      await api("/api/config", {
-        method: "POST",
-        body: JSON.stringify({ demucs_model: model }),
-      });
-      // Update status bar without re-rendering selectors
-      const modelData = window.__modelsData?.models.find(m => m.name === model);
-      if (modelData) {
-        // Update is_selected flags locally
-        window.__modelsData.models.forEach(m => m.is_selected = m.name === model);
-        window.__modelsData.current_model = model;
-      }
-      updateModelStatusBar();
-    } catch (e) {
-      console.error("Failed to update model:", e);
+
+    // Update local state immediately (optimistic update)
+    if (window.__modelsData) {
+      window.__modelsData.models.forEach(m => m.is_selected = m.name === model);
+      window.__modelsData.current_model = model;
+    }
+
+    // Check if model needs download BEFORE updating UI
+    const modelData = window.__modelsData?.models.find(m => m.name === model);
+    const needsDownload = modelData && !modelData.downloaded;
+
+    // If needs download, show downloading state immediately
+    if (needsDownload) {
+      window.__isDownloading = true;
+    }
+    updateModelStatusBar();
+
+    // Save config (don't await - do in background)
+    api("/api/config", {
+      method: "POST",
+      body: JSON.stringify({ demucs_model: model }),
+    }).catch(e => console.error("Failed to update model config:", e));
+
+    // Start download if needed
+    if (needsDownload) {
+      await autoDownloadModel(model);
     }
   });
 }
@@ -2078,33 +2089,45 @@ function renderStemModeSelector(data) {
   newSelect.addEventListener("change", async () => {
     let stemMode = newSelect.value;
     let updates = { stem_mode: stemMode };
+    let needsDownload = false;
+
+    // Update local state immediately (optimistic update)
+    if (window.__modelsData) {
+      window.__modelsData.stem_modes.forEach(m => m.is_selected = m.id === stemMode);
+      window.__modelsData.current_stem_mode = stemMode;
+    }
 
     // 6-stem requires htdemucs_6s
     if (stemMode === "6") {
       updates.demucs_model = "htdemucs_6s";
       const modelSelect = $("#cfg-demucs-model");
       if (modelSelect) modelSelect.value = "htdemucs_6s";
-      // Update local state for model too
       if (window.__modelsData) {
         window.__modelsData.models.forEach(m => m.is_selected = m.name === "htdemucs_6s");
         window.__modelsData.current_model = "htdemucs_6s";
+        const modelData = window.__modelsData.models.find(m => m.name === "htdemucs_6s");
+        needsDownload = modelData && !modelData.downloaded;
       }
     }
 
-    try {
-      await api("/api/config", {
-        method: "POST",
-        body: JSON.stringify(updates),
-      });
-      // Update local state without re-rendering selectors
-      if (window.__modelsData) {
-        window.__modelsData.stem_modes.forEach(m => m.is_selected = m.id === stemMode);
-        window.__modelsData.current_stem_mode = stemMode;
-      }
-      updateModelStatusBar();
-      updateStemChips();
-    } catch (e) {
-      console.error("Failed to update stem mode:", e);
+    // If needs download, show downloading state immediately
+    if (needsDownload) {
+      window.__isDownloading = true;
+    }
+
+    // Update UI immediately
+    updateModelStatusBar();
+    updateStemChips();
+
+    // Save config (don't await - do in background)
+    api("/api/config", {
+      method: "POST",
+      body: JSON.stringify(updates),
+    }).catch(e => console.error("Failed to update stem mode config:", e));
+
+    // Auto-download htdemucs_6s if needed for 6-stem mode
+    if (needsDownload) {
+      await autoDownloadModel("htdemucs_6s");
     }
   });
 }
@@ -2114,9 +2137,15 @@ function updateModelStatusBar() {
   const downloadBtn = $("#btn-quick-download");
   if (!statusBar || !downloadBtn || !window.__modelsData) return;
 
-  const modelSelect = $("#cfg-demucs-model");
-  const selectedModelName = modelSelect?.value;
+  // Use the data model as source of truth to avoid DOM sync issues
+  const selectedModelName = window.__modelsData.current_model;
   const selectedModel = window.__modelsData.models.find(m => m.name === selectedModelName);
+
+  // Ensure dropdown matches our state
+  const modelSelect = $("#cfg-demucs-model");
+  if (modelSelect && modelSelect.value !== selectedModelName) {
+    modelSelect.value = selectedModelName;
+  }
 
   statusBar.classList.remove("ready", "missing", "downloading");
 
@@ -2155,7 +2184,7 @@ function updateModelStatusBar() {
     statusBar.classList.add("missing");
     const text = document.createElement("span");
     text.className = "status-text";
-    text.textContent = `${selectedModelName} not downloaded (~${selectedModel?.size_mb || "?"}MB)`;
+    text.textContent = `${selectedModelName} requires download — Click to download (~${selectedModel?.size_mb || "?"}MB)`;
     statusBar.appendChild(text);
     downloadBtn.style.display = "inline-flex";
     downloadBtn.textContent = "Download Now";
@@ -2183,39 +2212,45 @@ function updateStemChips() {
   }
 }
 
+async function autoDownloadModel(modelName) {
+  if (!modelName) return;
+
+  // Set downloading state if not already set
+  if (!window.__isDownloading) {
+    window.__isDownloading = true;
+    updateModelStatusBar();
+  }
+
+  try {
+    const result = await api("/api/models/download", {
+      method: "POST",
+      body: JSON.stringify({ model: modelName }),
+    });
+
+    window.__isDownloading = false;
+
+    if (result.success) {
+      await loadModelsConfig();
+    } else {
+      console.error(`Download failed: ${result.message}`);
+      updateModelStatusBar();
+    }
+  } catch (e) {
+    window.__isDownloading = false;
+    console.error(`Download error: ${e.message || e}`);
+    updateModelStatusBar();
+  }
+}
+
 function setupQuickDownload() {
   const btn = $("#btn-quick-download");
   if (!btn) return;
 
   btn.addEventListener("click", async () => {
-    const modelSelect = $("#cfg-demucs-model");
-    const modelName = modelSelect?.value;
+    const modelName = window.__modelsData?.current_model;
     if (!modelName) return;
 
-    window.__isDownloading = true;
-    btn.disabled = true;
-    btn.textContent = "Downloading...";
-    updateModelStatusBar();
-
-    try {
-      const result = await api("/api/models/download", {
-        method: "POST",
-        body: JSON.stringify({ model: modelName }),
-      });
-
-      window.__isDownloading = false;
-
-      if (result.success) {
-        await loadModelsConfig();
-      } else {
-        alert(`Download failed: ${result.message}`);
-        updateModelStatusBar();
-      }
-    } catch (e) {
-      window.__isDownloading = false;
-      alert(`Download error: ${e.message || e}`);
-      updateModelStatusBar();
-    }
+    await autoDownloadModel(modelName);
   });
 }
 
