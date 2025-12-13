@@ -1,13 +1,13 @@
 :root {
-  --bg: #0a0c10;
-  --card: #12151a;
-  --muted: #7a8ba0;
-  --text: #e8eef5;
-  --accent: #7c8faa;
-  --accent-2: #5a9f7a;
-  --border: #1c1f26;
-  --warn: #c9a066;
-  --error: #c97171;
+  --bg: #0b0f14;
+  --card: #121822;
+  --muted: #8aa0b8;
+  --text: #e6edf3;
+  --accent: #3b82f6;
+  --accent-2: #22c55e;
+  --border: #1f2937;
+  --warn: #f59e0b;
+  --error: #ef4444;
 }
 
 * {
@@ -51,35 +51,10 @@ header .config * {
   app-region: no-drag !important;
 }
 
-/* Header branding with tagline */
-.header-branding {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
 h1 {
   margin: 0;
-  font-family: 'Outfit', Inter, system-ui, sans-serif;
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -0.8px;
-  background: linear-gradient(135deg, #e6edf3 0%, #9fb2c8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  line-height: 1;
-}
-
-.tagline {
-  margin: 0;
-  font-family: 'Outfit', Inter, system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: rgba(159, 178, 200, 0.7);
-  line-height: 1;
+  font-size: 18px;
+  letter-spacing: 0.2px;
 }
 
 .config {
@@ -120,18 +95,18 @@ input[type="number"] {
 }
 
 button {
-  background: linear-gradient(135deg, #8b9db5 0%, #7c8faa 100%);
-  border: 1px solid rgba(124, 143, 170, 0.3);
-  color: #0a0c10;
+  background: hsl(262.1 83.3% 57.8%);
+  border: 1px solid transparent;
+  color: hsl(210 40% 98%);
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 14px;
   line-height: 1;
   letter-spacing: 0;
-  transition: all 140ms cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(124, 143, 170, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: none;
   will-change: transform;
   height: 36px;
   display: inline-flex;
@@ -139,17 +114,17 @@ button {
   justify-content: center;
 }
 button:hover {
-  background: linear-gradient(135deg, #9aabc1 0%, #8b9db5 100%);
-  box-shadow: 0 4px 12px rgba(124, 143, 170, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+  background: hsl(262.1 83.3% 57.8% / 0.9);
   opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
 }
 button:active {
   transform: translateY(0);
   transition: all 80ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 button:disabled {
-  opacity: 0.4;
+  opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -162,26 +137,26 @@ button:disabled {
 
 button.secondary {
   background: transparent;
-  border: 1px solid rgba(122, 139, 160, 0.25);
-  color: #e8eef5;
+  border: 1px solid hsl(217.2 32.6% 17.5%);
+  color: hsl(210 40% 98%);
   box-shadow: none;
 }
 button.secondary:hover {
-  background: rgba(124, 143, 170, 0.1);
-  border-color: rgba(124, 143, 170, 0.4);
-  box-shadow: 0 2px 8px rgba(124, 143, 170, 0.12);
+  background: hsl(217.2 32.6% 17.5%);
+  border-color: hsl(217.2 32.6% 17.5%);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(31, 41, 55, 0.35);
 }
 button.danger {
-  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
-  border: 1px solid rgba(248, 113, 113, 0.2);
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(248, 113, 113, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  background: hsl(0 84.2% 60.2%);
+  border: 1px solid transparent;
+  color: hsl(210 40% 98%);
+  box-shadow: none;
 }
 button.danger:hover {
-  background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%);
-  box-shadow: 0 4px 12px rgba(248, 113, 113, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: hsl(0 84.2% 60.2% / 0.9);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
 }
 
 main {
@@ -219,11 +194,9 @@ main {
 
 h2 {
   margin: 0 0 12px;
-  font-family: 'Outfit', Inter, system-ui, sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   color: var(--muted);
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  font-weight: 600;
 }
 
 .row {
@@ -296,7 +269,7 @@ h2 {
 .progress .bar {
   position: absolute;
   height: 100%;
-  background: linear-gradient(90deg, var(--accent), #9aabc1);
+  background: linear-gradient(90deg, var(--accent), #7aa8ff);
   width: 0%;
   transition: width 0.25s ease;
 }
@@ -334,9 +307,9 @@ h2 {
 .spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(124, 143, 170, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.15);
   border-top-color: var(--accent);
-  border-right-color: rgba(124, 143, 170, 0.5);
+  border-right-color: rgba(59, 130, 246, 0.5);
   border-radius: 50%;
   display: inline-block;
   animation: spin 0.8s cubic-bezier(0.5, 0, 0.5, 1) infinite;
@@ -412,10 +385,10 @@ h2 {
 /* Subtle glow pulse for active progress */
 @keyframes progressGlow {
   0%, 100% {
-    filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.3));
+    filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.35));
   }
   50% {
-    filter: drop-shadow(0 0 12px rgba(96, 165, 250, 0.45));
+    filter: drop-shadow(0 0 14px rgba(59, 130, 246, 0.55));
   }
 }
 
@@ -426,30 +399,6 @@ h2 {
   }
   50% {
     opacity: 1;
-  }
-}
-
-/* Slide in from right for new items */
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Slide in from bottom for new items */
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 .progress .bar {
@@ -511,8 +460,7 @@ h2 {
   background: var(--muted);
 }
 .status-running {
-  background: #60a5fa;
-  box-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
+  background: var(--accent);
 }
 .status-done {
   background: var(--accent-2);
@@ -563,28 +511,28 @@ header {
 
 /* Enhanced background with animated gradient haze */
 :root {
-  --bg-grad-1: #0d1015;
-  --bg-grad-2: #0a0c10;
-  --bg-accent-1: rgba(96, 120, 160, 0.06);
-  --bg-accent-2: rgba(96, 120, 160, 0.08);
-  --shadow-strong: 0 10px 30px rgba(0, 0, 0, 0.5);
-  --shadow-soft: 0 8px 24px rgba(10, 12, 16, 0.4);
-  --ring: rgba(124, 143, 170, 0.4);
+  --bg-grad-1: #0b1220;
+  --bg-grad-2: #0b0f14;
+  --bg-accent-1: rgba(59, 130, 246, 0.18);
+  --bg-accent-2: rgba(168, 85, 247, 0.18);
+  --shadow-strong: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --shadow-soft: 0 8px 24px rgba(16, 24, 40, 0.35);
+  --ring: rgba(59, 130, 246, 0.35);
 }
 
 body {
   background: radial-gradient(
-      1400px 700px at 15% -5%,
+      1200px 600px at 10% -10%,
       var(--bg-accent-1),
       transparent
     ),
-    radial-gradient(1000px 600px at 85% 10%, var(--bg-accent-2), transparent),
+    radial-gradient(900px 500px at 100% 10%, var(--bg-accent-2), transparent),
     radial-gradient(
-      1200px 800px at 50% 100%,
-      rgba(96, 120, 160, 0.04),
+      900px 900px at 50% 120%,
+      rgba(34, 197, 94, 0.12),
       transparent
     ),
-    linear-gradient(135deg, var(--bg-grad-1) 0%, var(--bg-grad-2) 100%);
+    linear-gradient(180deg, var(--bg-grad-1), var(--bg-grad-2));
 }
 
 body::before {
@@ -592,22 +540,17 @@ body::before {
   position: fixed;
   inset: -10%;
   background: radial-gradient(
-      900px 500px at 65% 25%,
-      rgba(96, 120, 160, 0.06),
-      transparent 65%
+      800px 400px at 70% 20%,
+      rgba(59, 130, 246, 0.12),
+      transparent 60%
     ),
     radial-gradient(
-      700px 400px at 25% 70%,
-      rgba(96, 120, 160, 0.05),
-      transparent 65%
-    ),
-    radial-gradient(
-      600px 600px at 80% 80%,
-      rgba(90, 159, 122, 0.04),
-      transparent 70%
+      600px 300px at 20% 60%,
+      rgba(168, 85, 247, 0.1),
+      transparent 60%
     );
-  filter: blur(40px);
-  opacity: 0.6;
+  filter: blur(30px);
+  opacity: 0.8;
   pointer-events: none;
   z-index: -1;
 }
@@ -653,17 +596,15 @@ main {
     border-color 220ms ease;
 }
 .card:hover {
-  border-color: rgba(124, 143, 170, 0.4);
-  box-shadow: 0 10px 35px rgba(124, 143, 170, 0.08), var(--shadow-soft);
+  border-color: rgba(99, 102, 241, 0.55);
+  box-shadow: 0 10px 35px rgba(59, 130, 246, 0.18), var(--shadow-soft);
 }
 
 /* Headings with subtle glow underline */
 h2 {
   margin: 0 0 14px;
-  font-family: 'Outfit', Inter, system-ui, sans-serif;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
+  font-size: 15px;
+  letter-spacing: 0.2px;
   color: #c8d3df;
   position: relative;
 }
@@ -677,10 +618,10 @@ h2::after {
   border-radius: 999px;
   background: linear-gradient(
     90deg,
-    rgba(124, 143, 170, 0.7),
-    rgba(124, 143, 170, 0.2)
+    rgba(59, 130, 246, 0.65),
+    rgba(168, 85, 247, 0.65)
   );
-  filter: drop-shadow(0 0 6px rgba(124, 143, 170, 0.25));
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.35));
 }
 
 /* Inputs - crisp with glow on focus */
@@ -702,24 +643,24 @@ input[type="number"]::placeholder {
 input[type="text"]:focus,
 input[type="number"]:focus {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px rgba(124, 143, 170, 0.12);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
   background: rgba(18, 26, 36, 0.95);
   outline: none;
 }
 
 /* Add button styling */
 .add-button {
-  background: rgba(124, 143, 170, 0.1);
-  border: 1px solid rgba(124, 143, 170, 0.3);
-  color: #9aabc1;
+  background: hsl(262.1 83.3% 57.8% / 0.1);
+  border: 1px solid hsl(262.1 83.3% 57.8% / 0.3);
+  color: hsl(262.1 83.3% 57.8%);
   padding: 6px;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
   font-size: 16px;
   line-height: 1;
   letter-spacing: 0;
-  transition: all 140ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 120ms ease;
   box-shadow: none;
   width: 28px;
   height: 28px;
@@ -729,26 +670,13 @@ input[type="number"]:focus {
   flex-shrink: 0;
 }
 .add-button:hover {
-  background: rgba(124, 143, 170, 0.2);
-  border-color: rgba(124, 143, 170, 0.5);
-  color: #b5c4d6;
-  transform: scale(1.05) rotate(90deg);
-  box-shadow: 0 2px 8px rgba(124, 143, 170, 0.15);
+  background: hsl(262.1 83.3% 57.8% / 0.2);
+  border-color: hsl(262.1 83.3% 57.8% / 0.5);
+  color: hsl(262.1 83.3% 67.8%);
+  transform: none;
+  box-shadow: none;
   filter: none;
   opacity: 1;
-}
-.add-button:active {
-  transform: scale(0.95) rotate(90deg);
-  transition: all 80ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .add-button:hover {
-    transform: none;
-  }
-  .add-button:active {
-    transform: none;
-  }
 }
 
 /* Tighten and balance rows */
@@ -762,7 +690,6 @@ input[type="number"]:focus {
   gap: 10px;
   max-height: calc(100vh - 300px);
   padding-right: 6px;
-  padding-top: 4px;
 }
 
 .item {
@@ -780,9 +707,9 @@ input[type="number"]:focus {
   box-shadow: 0 3px 12px rgba(2, 6, 23, 0.45);
 }
 .item:hover {
-  border-color: rgba(124, 143, 170, 0.45);
+  border-color: rgba(99, 102, 241, 0.55);
   box-shadow: 0 10px 22px rgba(2, 6, 23, 0.55),
-    0 0 0 1px rgba(124, 143, 170, 0.1) inset;
+    0 0 0 1px rgba(99, 102, 241, 0.12) inset;
   transform: translateY(-2px);
 }
 
@@ -842,9 +769,9 @@ input[type="number"]:focus {
     box-shadow 200ms ease;
 }
 .queue-item:hover {
-  border-color: rgba(124, 143, 170, 0.4);
+  border-color: rgba(59, 130, 246, 0.55);
   box-shadow: 0 10px 22px rgba(2, 6, 23, 0.55),
-    0 0 0 1px rgba(124, 143, 170, 0.06) inset;
+    0 0 0 1px rgba(59, 130, 246, 0.08) inset;
   transform: translateY(-2px);
 }
 
@@ -964,42 +891,21 @@ input[type="number"]:focus {
 /* Status dots brighter */
 .status-queued {
   background: #8aa0b8;
-  transition: box-shadow 200ms ease;
 }
 .status-running {
   background: #60a5fa;
   box-shadow: 0 0 10px rgba(96, 165, 250, 0.6);
-  transition: box-shadow 200ms ease;
 }
 .status-done {
   background: #22c55e;
   box-shadow: 0 0 10px rgba(34, 197, 94, 0.45);
-  transition: box-shadow 200ms ease;
 }
 .status-error {
   background: #ef4444;
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
-  transition: box-shadow 200ms ease;
 }
 .status-canceled {
   background: #f59e0b;
-  transition: box-shadow 200ms ease;
-}
-
-/* Pulse animation for running status */
-@keyframes statusPulse {
-  0%, 100% {
-    box-shadow: 0 0 10px rgba(96, 165, 250, 0.6);
-  }
-  50% {
-    box-shadow: 0 0 16px rgba(96, 165, 250, 0.85);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .status-running {
-    animation: statusPulse 2s ease-in-out infinite;
-  }
 }
 
 /* Muted text slightly brighter for readability */
@@ -1025,60 +931,29 @@ input[type="number"]:focus {
   margin-top: 8px;
   border-radius: 6px;
   cursor: pointer;
-  font-family: 'Outfit', Inter, system-ui, sans-serif;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 14px;
-  letter-spacing: 0.2px;
   line-height: 1;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 120ms ease;
   border-bottom: 2px solid transparent;
   box-shadow: none;
   height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-}
-
-.tab-button::after {
-  content: "";
-  position: absolute;
-  bottom: -2px;
-  left: 50%;
-  width: 0%;
-  height: 2px;
-  background: #7c8faa;
-  border-radius: 999px;
-  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1),
-              left 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 6px rgba(124, 143, 170, 0.3);
 }
 
 .tab-button:hover {
-  color: #e8eef5;
-  background: rgba(124, 143, 170, 0.1);
+  color: hsl(210 40% 98%);
+  background: hsl(217.2 32.6% 17.5%);
   transform: none;
 }
 
 .tab-button.active {
-  color: #9aabc1;
-  background: rgba(124, 143, 170, 0.12);
-  border-bottom-color: transparent;
-  box-shadow: 0 2px 8px rgba(124, 143, 170, 0.1);
-}
-
-.tab-button.active::after {
-  width: calc(100% - 32px);
-  left: 16px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tab-button::after {
-    transition: none;
-  }
-  .tab-button.active::after {
-    width: calc(100% - 32px);
-  }
+  color: hsl(262.1 83.3% 57.8%);
+  background: hsl(217.2 32.6% 17.5%);
+  border-bottom-color: hsl(262.1 83.3% 57.8%);
+  box-shadow: none;
 }
 
 .tab-content {
@@ -1105,8 +980,8 @@ input[type="number"]:focus {
 }
 
 .queue-container:hover {
-  border-color: rgba(124, 143, 170, 0.4);
-  box-shadow: 0 10px 35px rgba(124, 143, 170, 0.08), var(--shadow-soft);
+  border-color: rgba(99, 102, 241, 0.55);
+  box-shadow: 0 10px 35px rgba(59, 130, 246, 0.18), var(--shadow-soft);
 }
 
 .queue-container .queue {
@@ -1168,12 +1043,12 @@ input[type="number"]:focus {
     box-shadow 180ms ease;
 }
 .drop-zone:hover {
-  border-color: rgba(124, 143, 170, 0.5);
+  border-color: rgba(99, 102, 241, 0.55);
 }
 .drop-zone.dragover {
-  border-color: rgba(124, 143, 170, 0.7);
+  border-color: rgba(99, 102, 241, 0.85);
   background: rgba(18, 26, 36, 0.9);
-  box-shadow: 0 0 0 4px rgba(124, 143, 170, 0.12) inset;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12) inset;
 }
 @media (max-width: 700px) {
   .drop-zone {
@@ -1210,10 +1085,8 @@ input[type="number"]:focus {
 
 /* yt-dlp update section */
 h3 {
-  font-family: 'Outfit', Inter, system-ui, sans-serif;
   font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  font-weight: 600;
   margin: 24px 0 12px 0;
   color: #c8d3df;
 }
@@ -1230,407 +1103,4 @@ h3 {
 
 .ytdlp-status-row button {
   flex-shrink: 0;
-}
-
-/* ================================================ */
-/* ENHANCED PROGRESS INDICATORS & STATUS EFFECTS   */
-/* ================================================ */
-
-/* Progress Bar - Dynamic Gradient with Glowing Edge */
-.progress {
-  position: relative;
-  overflow: hidden;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    inset 0 0 12px rgba(0, 0, 0, 0.5);
-}
-
-/* Subtle glow backdrop when progress is active */
-.progress::before {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(96, 165, 250, 0.15),
-    transparent 70%
-  );
-  opacity: 0;
-  transition: opacity 400ms ease;
-  pointer-events: none;
-  z-index: -1;
-  border-radius: inherit;
-}
-
-/* Show glow when progress bar has width */
-.progress:has(.bar[style*="width"]:not([style*="width: 0%"]))::before {
-  opacity: 1;
-}
-
-/* Enhanced progress bar with animated gradient and stripes */
-.progress .bar {
-  background: linear-gradient(
-      90deg,
-      rgba(96, 165, 250, 0.85),
-      rgba(122, 180, 255, 0.9),
-      rgba(147, 197, 253, 0.85),
-      rgba(122, 180, 255, 0.9),
-      rgba(96, 165, 250, 0.85)
-    ),
-    linear-gradient(
-      45deg,
-      rgba(255, 255, 255, 0.12) 25%,
-      transparent 25%,
-      transparent 50%,
-      rgba(255, 255, 255, 0.12) 50%,
-      rgba(255, 255, 255, 0.12) 75%,
-      transparent 75%,
-      transparent
-    );
-  background-size: 200% 100%, 20px 20px;
-  box-shadow: 0 0 12px rgba(96, 165, 250, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-  position: relative;
-  filter: none;
-}
-
-/* Glowing leading edge */
-.progress .bar::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: linear-gradient(
-    to right,
-    transparent,
-    rgba(255, 255, 255, 0.85)
-  );
-  box-shadow: 0 0 8px rgba(147, 197, 253, 0.7),
-    0 0 4px rgba(255, 255, 255, 0.5);
-  opacity: 0.8;
-}
-
-/* Animated gradient shift and stripe movement */
-@keyframes progressFlow {
-  0% {
-    background-position: 0% 0, 0 0;
-  }
-  100% {
-    background-position: 200% 0, 20px 0;
-  }
-}
-
-/* Gentle pulsing glow for active progress */
-@keyframes progressPulse {
-  0%, 100% {
-    box-shadow: 0 0 12px rgba(96, 165, 250, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.25),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 18px rgba(96, 165, 250, 0.55),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-  }
-}
-
-/* Apply animations to active progress (not 0%, not 100%) */
-@media (prefers-reduced-motion: no-preference) {
-  .progress .bar[style*="width"]:not([style*="width: 0%"]):not([style*="width: 100%"]) {
-    animation: progressFlow 2.5s linear infinite,
-      progressPulse 2s ease-in-out infinite;
-  }
-}
-
-/* Download Phase (0-30%) - Cool Blue Tones */
-.progress .bar.download-phase {
-  background: linear-gradient(
-      90deg,
-      rgba(96, 165, 250, 0.85),
-      rgba(122, 180, 255, 0.9),
-      rgba(147, 197, 253, 0.85),
-      rgba(122, 180, 255, 0.9),
-      rgba(96, 165, 250, 0.85)
-    ),
-    linear-gradient(
-      45deg,
-      rgba(255, 255, 255, 0.12) 25%,
-      transparent 25%,
-      transparent 50%,
-      rgba(255, 255, 255, 0.12) 50%,
-      rgba(255, 255, 255, 0.12) 75%,
-      transparent 75%,
-      transparent
-    );
-  background-size: 200% 100%, 18px 18px;
-  box-shadow: 0 0 14px rgba(96, 165, 250, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .progress .bar.download-phase[style*="width"]:not([style*="width: 0%"]):not([style*="width: 30%"]) {
-    animation: progressFlow 2.2s linear infinite,
-      progressPulse 2s ease-in-out infinite;
-  }
-}
-
-/* Processing Phase (30-100%) - Muted Indigo Gradient */
-.progress .bar.processing-phase {
-  background: linear-gradient(
-      90deg,
-      rgba(99, 102, 241, 0.85),
-      rgba(129, 140, 248, 0.9),
-      rgba(165, 180, 252, 0.85),
-      rgba(129, 140, 248, 0.9),
-      rgba(99, 102, 241, 0.85)
-    ),
-    linear-gradient(
-      45deg,
-      rgba(255, 255, 255, 0.14) 25%,
-      transparent 25%,
-      transparent 50%,
-      rgba(255, 255, 255, 0.14) 50%,
-      rgba(255, 255, 255, 0.14) 75%,
-      transparent 75%,
-      transparent
-    );
-  background-size: 200% 100%, 22px 22px;
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.progress .bar.processing-phase::after {
-  box-shadow: 0 0 10px rgba(165, 180, 252, 0.7),
-    0 0 5px rgba(255, 255, 255, 0.6);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .progress .bar.processing-phase[style*="width"]:not([style*="width: 30%"]):not([style*="width: 100%"]) {
-    animation: progressFlow 2.8s linear infinite,
-      progressPulse 1.8s ease-in-out infinite;
-  }
-}
-
-/* Enhanced Status Dots with Pulsing Glow */
-.status-dot {
-  transition: all 300ms ease;
-}
-
-/* Running status - pulsing blue glow */
-@keyframes statusRunningPulse {
-  0%, 100% {
-    box-shadow: 0 0 6px rgba(96, 165, 250, 0.5),
-      0 0 3px rgba(96, 165, 250, 0.7);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 10px rgba(96, 165, 250, 0.7),
-      0 0 6px rgba(96, 165, 250, 0.9),
-      0 0 16px rgba(96, 165, 250, 0.3);
-    transform: scale(1.08);
-  }
-}
-
-.status-running {
-  animation: statusRunningPulse 2s ease-in-out infinite;
-}
-
-/* Done status - brief celebration glow */
-@keyframes statusDoneGlow {
-  0% {
-    box-shadow: 0 0 0 rgba(74, 222, 128, 0);
-    transform: scale(0.8);
-  }
-  40% {
-    box-shadow: 0 0 16px rgba(74, 222, 128, 0.8),
-      0 0 8px rgba(74, 222, 128, 1),
-      0 0 24px rgba(74, 222, 128, 0.4);
-    transform: scale(1.3);
-  }
-  100% {
-    box-shadow: 0 0 8px rgba(74, 222, 128, 0.5),
-      0 0 4px rgba(74, 222, 128, 0.7);
-    transform: scale(1);
-  }
-}
-
-.status-done {
-  animation: statusDoneGlow 0.6s ease-out;
-  animation-fill-mode: forwards;
-}
-
-/* Error status - attention-grabbing pulse */
-@keyframes statusErrorPulse {
-  0%, 100% {
-    box-shadow: 0 0 8px rgba(248, 113, 113, 0.6),
-      0 0 4px rgba(248, 113, 113, 0.8);
-  }
-  50% {
-    box-shadow: 0 0 16px rgba(248, 113, 113, 0.9),
-      0 0 10px rgba(248, 113, 113, 1),
-      0 0 24px rgba(248, 113, 113, 0.5);
-  }
-}
-
-.status-error {
-  animation: statusErrorPulse 1.2s ease-in-out infinite;
-}
-
-/* Canceled status - subtle warning glow */
-.status-canceled {
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
-}
-
-/* Enhanced Phase Badges */
-.phase-badge {
-  transition: all 250ms ease;
-  position: relative;
-}
-
-/* Download phase badge - active state */
-.phase-badge.download-badge {
-  background: rgba(96, 165, 250, 0.15);
-  border-color: rgba(96, 165, 250, 0.4);
-  color: #93c5fd;
-}
-
-@keyframes phaseDownloadPulse {
-  0%, 100% {
-    background: rgba(96, 165, 250, 0.15);
-    box-shadow: 0 0 0 rgba(96, 165, 250, 0);
-  }
-  50% {
-    background: rgba(96, 165, 250, 0.22);
-    box-shadow: 0 0 6px rgba(96, 165, 250, 0.25);
-  }
-}
-
-.phase-badge.download-badge.active {
-  animation: phaseDownloadPulse 2s ease-in-out infinite;
-}
-
-/* Processing phase badge - enhanced pulse */
-@keyframes phaseProcessingPulse {
-  0%, 100% {
-    background: rgba(99, 102, 241, 0.15);
-    box-shadow: 0 0 0 rgba(99, 102, 241, 0);
-    transform: scale(1);
-  }
-  50% {
-    background: rgba(99, 102, 241, 0.22);
-    box-shadow: 0 0 8px rgba(99, 102, 241, 0.3),
-      0 0 4px rgba(129, 140, 248, 0.2);
-    transform: scale(1.02);
-  }
-}
-
-.phase-badge.processing-badge {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: rgba(99, 102, 241, 0.4);
-  color: #a5b4fc;
-  animation: phaseProcessingPulse 1.8s ease-in-out infinite;
-}
-
-/* Done phase badge - success glow */
-.phase-badge.phase-done {
-  background: rgba(24, 40, 28, 0.7);
-  border-color: rgba(74, 222, 128, 0.4);
-  color: #6ee7a5;
-  box-shadow: 0 0 6px rgba(74, 222, 128, 0.2);
-}
-
-/* Queue Item Success Completion Effect */
-@keyframes queueItemSuccess {
-  0% {
-    border-color: rgba(56, 71, 94, 0.6);
-    box-shadow: 0 3px 12px rgba(2, 6, 23, 0.45);
-  }
-  30% {
-    border-color: rgba(74, 222, 128, 0.8);
-    box-shadow: 0 0 24px rgba(74, 222, 128, 0.6),
-      0 0 12px rgba(74, 222, 128, 0.8),
-      inset 0 0 20px rgba(74, 222, 128, 0.1);
-    transform: scale(1.01);
-  }
-  100% {
-    border-color: rgba(74, 222, 128, 0.4);
-    box-shadow: 0 3px 12px rgba(2, 6, 23, 0.45),
-      0 0 8px rgba(74, 222, 128, 0.2);
-    transform: scale(1);
-  }
-}
-
-.queue-item.just-completed {
-  animation: queueItemSuccess 1.2s ease-out;
-}
-
-/* Queue Item Error Effect */
-@keyframes queueItemError {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  10%, 30%, 50%, 70%, 90% {
-    transform: translateX(-3px);
-  }
-  20%, 40%, 60%, 80% {
-    transform: translateX(3px);
-  }
-}
-
-@keyframes queueItemErrorGlow {
-  0% {
-    border-color: rgba(56, 71, 94, 0.6);
-    box-shadow: 0 3px 12px rgba(2, 6, 23, 0.45);
-  }
-  50% {
-    border-color: rgba(248, 113, 113, 0.8);
-    box-shadow: 0 0 20px rgba(248, 113, 113, 0.6),
-      0 0 10px rgba(248, 113, 113, 0.8);
-  }
-  100% {
-    border-color: rgba(248, 113, 113, 0.5);
-    box-shadow: 0 3px 12px rgba(2, 6, 23, 0.45),
-      0 0 8px rgba(248, 113, 113, 0.3);
-  }
-}
-
-.queue-item.has-error {
-  animation: queueItemError 0.5s ease-in-out,
-    queueItemErrorGlow 0.8s ease-out;
-  border-color: rgba(248, 113, 113, 0.5);
-}
-
-/* Accessibility: Reduce motion for users who prefer it */
-@media (prefers-reduced-motion: reduce) {
-  .progress .bar,
-  .progress .bar.download-phase,
-  .progress .bar.processing-phase,
-  .status-running,
-  .status-done,
-  .status-error,
-  .phase-badge.download-badge.active,
-  .phase-badge.processing-badge,
-  .queue-item.just-completed,
-  .queue-item.has-error {
-    animation: none !important;
-  }
-
-  .progress .bar::after {
-    opacity: 0.5;
-  }
-
-  /* Still show status with static glows for reduced motion */
-  .status-running {
-    box-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
-  }
-
-  .status-done {
-    box-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
-  }
-
-  .status-error {
-    box-shadow: 0 0 10px rgba(248, 113, 113, 0.6);
-  }
 }
