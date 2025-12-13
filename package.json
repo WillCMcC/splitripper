@@ -1,6 +1,6 @@
 {
   "name": "splitboy",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "An Electron desktop app that downloads audio from YouTube and separates it into vocal and instrumental tracks using Demucs.",
   "main": "main.js",
   "scripts": {
