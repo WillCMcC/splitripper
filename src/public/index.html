@@ -86,15 +86,68 @@
         </div>
 
         <div class="tab-content" id="settings-tab">
-          <h2>Settings</h2>
-          <div class="row">
-            <label>
-              Output folder:
-              <div class="file-picker-container">
+          <nav class="settings-subtabs">
+            <button class="subtab-btn active" data-subtab="separation">Separation</button>
+            <button class="subtab-btn" data-subtab="models">Models</button>
+            <button class="subtab-btn" data-subtab="general">General</button>
+          </nav>
+
+          <!-- Separation Settings -->
+          <div class="subtab-content active" id="subtab-separation">
+            <div class="separation-config-card">
+              <div class="config-row">
+                <div class="config-field">
+                  <label for="cfg-demucs-model">Model</label>
+                  <select id="cfg-demucs-model">
+                    <option value="htdemucs">Loading...</option>
+                  </select>
+                </div>
+                <div class="config-field">
+                  <label for="cfg-stem-mode">Stems</label>
+                  <select id="cfg-stem-mode">
+                    <option value="2">2 Stems</option>
+                    <option value="4">4 Stems</option>
+                    <option value="6">6 Stems</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="model-status-bar" class="model-status-bar">
+                <span class="status-indicator"></span>
+                <span class="status-text">Loading...</span>
+                <button id="btn-quick-download" class="quick-download-btn" style="display: none;">
+                  Download Model
+                </button>
+              </div>
+
+              <div class="stem-preview">
+                <span class="preview-label">Output stems:</span>
+                <div id="stem-chips" class="stem-chips"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Model Management -->
+          <div class="subtab-content" id="subtab-models">
+            <div class="models-header">
+              <span class="models-title">Available Models</span>
+              <button id="btn-download-all" class="secondary">Download All</button>
+            </div>
+            <div id="model-downloads" class="model-downloads-list">
+              <span class="muted">Loading models...</span>
+            </div>
+          </div>
+
+          <!-- General Settings -->
+          <div class="subtab-content" id="subtab-general">
+            <div class="settings-section">
+              <h3>Output Location</h3>
+              <div class="file-picker-row">
                 <input
                   id="cfg-output"
                   type="text"
                   placeholder="Click Browse to select folder..."
+                  readonly
                 />
                 <input
                   id="cfg-output-file-input"
@@ -107,19 +160,17 @@
                   Browse
                 </button>
               </div>
-            </label>
-          </div>
-          <div class="row">
-            <span id="config-status" class="muted"></span>
-          </div>
+              <span id="config-status" class="muted"></span>
+            </div>
 
-          <h3>yt-dlp</h3>
-          <div class="row ytdlp-status-row">
-            <span id="ytdlp-version" class="muted">Checking version...</span>
-            <button id="btn-ytdlp-update" class="secondary">Update yt-dlp</button>
-          </div>
-          <div class="row">
-            <span id="ytdlp-update-status" class="muted"></span>
+            <div class="settings-section">
+              <h3>yt-dlp</h3>
+              <div class="ytdlp-row">
+                <span id="ytdlp-version" class="muted">Checking version...</span>
+                <button id="btn-ytdlp-update" class="secondary">Update</button>
+              </div>
+              <span id="ytdlp-update-status" class="muted"></span>
+            </div>
           </div>
         </div>
       </section>

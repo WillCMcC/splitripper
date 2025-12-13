@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .constants import DEFAULT_CONCURRENCY
+from .constants import DEFAULT_CONCURRENCY, DEFAULT_STEM_MODE
 from .logging_config import get_logger
 
 logger = get_logger("state")
@@ -37,6 +37,7 @@ class QueueItem:
     processing_eta_sec: Optional[int] = None
     dest_path: Optional[str] = None
     has_artist_metadata: bool = False
+    stem_mode: Optional[str] = None  # Per-job stem mode override (2, 4, or 6)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -58,6 +59,7 @@ class QueueItem:
             "download_eta_sec": self.download_eta_sec,
             "processing_eta_sec": self.processing_eta_sec,
             "dest_path": self.dest_path,
+            "stem_mode": self.stem_mode,
         }
 
     @classmethod
@@ -82,6 +84,7 @@ class QueueItem:
             processing_eta_sec=data.get("processing_eta_sec"),
             dest_path=data.get("dest_path"),
             has_artist_metadata=data.get("has_artist_metadata", False),
+            stem_mode=data.get("stem_mode"),
         )
 
 

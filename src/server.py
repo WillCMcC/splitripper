@@ -39,6 +39,10 @@ from lib.constants import (
     PLAYLIST_HARD_CAP,
     ENRICHMENT_CAP,
     PROCESSING_PROGRESS_WEIGHT,
+    DEMUCS_MODELS,
+    DEFAULT_DEMUCS_MODEL,
+    STEM_MODES,
+    DEFAULT_STEM_MODE,
 )
 from lib.config import Config, get_default_desktop_path
 from lib.logging_config import get_logger
@@ -74,6 +78,40 @@ if _ffmpeg_bin.exists():
             logger.error(f"ffmpeg stderr: {result.stderr[:200]}")
     except Exception as e:
         logger.error(f"ffmpeg execution test failed: {e}")
+
+
+def _seed_bundled_models():
+    """Copy bundled model files to user's torch cache for instant availability.
+
+    This allows users to start splitting immediately after install without
+    waiting for model downloads.
+    """
+    bundled_models_dir = BASE_DIR.parent / "python_runtime_bundle" / "models"
+    if not bundled_models_dir.exists():
+        return
+
+    # Get user's torch cache directory
+    cache_home = os.environ.get("TORCH_HOME") or os.environ.get("XDG_CACHE_HOME")
+    if cache_home:
+        user_cache = Path(cache_home) / "torch" / "hub" / "checkpoints"
+    else:
+        user_cache = Path.home() / ".cache" / "torch" / "hub" / "checkpoints"
+
+    user_cache.mkdir(parents=True, exist_ok=True)
+
+    # Copy any bundled model files that don't already exist in user cache
+    for model_file in bundled_models_dir.glob("*.th"):
+        dest = user_cache / model_file.name
+        if not dest.exists():
+            try:
+                shutil.copy2(model_file, dest)
+                logger.info(f"Seeded bundled model: {model_file.name}")
+            except Exception as e:
+                logger.warning(f"Failed to seed model {model_file.name}: {e}")
+
+
+# Seed bundled models on startup
+_seed_bundled_models()
 
 # Initialize configuration
 config = Config(CONFIG_PATH)
@@ -157,16 +195,44 @@ def _parse_time_to_seconds(ts: str) -> Optional[int]:
 def run_demucs_separation(
     audio_file: Path,
     output_dir: Path,
-    item: QueueItem
-) -> Tuple[Optional[Path], Optional[Path], Optional[str]]:
+    item: QueueItem,
+    model: Optional[str] = None,
+    stem_mode: Optional[str] = None,
+) -> Tuple[Optional[Dict[str, Path]], Optional[str]]:
     """
-    Run Demucs two-stem separation.
+    Run Demucs separation with configurable model and stem mode.
+
+    Args:
+        audio_file: Path to input audio file
+        output_dir: Directory for Demucs output
+        item: QueueItem for progress tracking
+        model: Demucs model name (defaults to config setting)
+        stem_mode: "2", "4", or "6" stem separation (defaults to config setting)
 
     Returns:
-        Tuple of (vocals_path, accompaniment_path, error_message_if_any)
+        Tuple of (dict mapping stem names to paths, error_message_if_any)
     """
     python_exe = sys.executable
     env = os.environ.copy()
+
+    # Get model and stem mode from config if not specified
+    if model is None:
+        model = app_state.get_config_value("demucs_model", DEFAULT_DEMUCS_MODEL)
+    if stem_mode is None:
+        stem_mode = item.stem_mode or app_state.get_config_value("stem_mode", DEFAULT_STEM_MODE)
+
+    # Validate model and stem_mode
+    if model not in DEMUCS_MODELS:
+        model = DEFAULT_DEMUCS_MODEL
+    if stem_mode not in STEM_MODES:
+        stem_mode = DEFAULT_STEM_MODE
+
+    # 6-stem mode requires htdemucs_6s
+    stem_config = STEM_MODES[stem_mode]
+    if stem_config.get("requires_model"):
+        model = stem_config["requires_model"]
+
+    logger.info(f"Demucs separation: model={model}, stem_mode={stem_mode}")
 
     # Add ffmpeg to path if bundled
     ffmpeg_dir = BASE_DIR.parent / "python_runtime_bundle" / "ffmpeg"
@@ -189,13 +255,19 @@ def run_demucs_separation(
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Build command
         cmd = [
             python_exe, "-m", "demucs.separate",
-            "--two-stems", "vocals",
+            "-n", model,
             "--mp3",
             "-o", str(output_dir),
-            str(audio_file)
         ]
+
+        # Add two-stems flag for 2-stem mode
+        if stem_mode == "2":
+            cmd.extend(["--two-stems", "vocals"])
+
+        cmd.append(str(audio_file))
         logger.debug(f"Running: {' '.join(cmd)}")
 
         proc = subprocess.Popen(
@@ -234,39 +306,68 @@ def run_demucs_separation(
 
         if proc.returncode != 0:
             error_msg = '\n'.join(error_lines[-5:]) if error_lines else "demucs failed"
-            return None, None, error_msg[:300]
+            return None, error_msg[:300]
 
-        # Find output files
-        vocals, accomp = _find_demucs_outputs(output_dir)
-        if vocals and accomp:
-            return vocals, accomp, None
-        return None, None, "demucs outputs not found"
+        # Find output files based on stem mode
+        stems = _find_demucs_outputs(output_dir, stem_mode, model)
+        if stems:
+            return stems, None
+        return None, "demucs outputs not found"
 
     except Exception as e:
-        return None, None, str(e)[:300]
+        return None, str(e)[:300]
 
 
-def _find_demucs_outputs(output_dir: Path) -> Tuple[Optional[Path], Optional[Path]]:
-    """Find vocals and accompaniment files in Demucs output."""
-    # Try MP3 first (our --mp3 flag output)
-    for p in output_dir.rglob("vocals.mp3"):
-        nv = p.parent / "no_vocals.mp3"
-        if nv.exists():
-            return p, nv
-        alt = p.parent / "accompaniment.mp3"
-        if alt.exists():
-            return p, alt
+def _find_demucs_outputs(output_dir: Path, stem_mode: str, model: str) -> Optional[Dict[str, Path]]:
+    """
+    Find Demucs output files based on stem mode.
 
-    # Fallback to WAV
-    for p in output_dir.rglob("vocals.wav"):
-        nv = p.parent / "no_vocals.wav"
-        if nv.exists():
-            return p, nv
-        alt = p.parent / "accompaniment.wav"
-        if alt.exists():
-            return p, alt
+    Returns:
+        Dict mapping stem type to file path, or None if outputs not found
+    """
+    stem_config = STEM_MODES.get(stem_mode, STEM_MODES[DEFAULT_STEM_MODE])
+    expected_stems = stem_config["stems"]
 
-    return None, None
+    # Demucs outputs to: output_dir/model_name/track_name/stem.mp3
+    # We need to find the model output directory
+    results = {}
+
+    for ext in ["mp3", "wav"]:
+        # Search for the first expected stem to locate the output directory
+        first_stem = expected_stems[0]  # Usually "vocals"
+        for stem_file in output_dir.rglob(f"{first_stem}.{ext}"):
+            stem_dir = stem_file.parent
+
+            # Check if all expected stems exist in this directory
+            all_found = True
+            for stem_name in expected_stems:
+                stem_path = stem_dir / f"{stem_name}.{ext}"
+                if stem_path.exists():
+                    results[stem_name] = stem_path
+                else:
+                    all_found = False
+                    break
+
+            if all_found:
+                return results
+            else:
+                results = {}
+
+    # For 2-stem mode, also check for "no_vocals" or "accompaniment"
+    if stem_mode == "2":
+        for ext in ["mp3", "wav"]:
+            for vocals_file in output_dir.rglob(f"vocals.{ext}"):
+                stem_dir = vocals_file.parent
+                results["vocals"] = vocals_file
+
+                # Check for accompaniment variants
+                for accomp_name in ["no_vocals", "accompaniment", "other"]:
+                    accomp_path = stem_dir / f"{accomp_name}.{ext}"
+                    if accomp_path.exists():
+                        results["no_vocals"] = accomp_path
+                        return results
+
+    return None if not results else results
 
 
 # =============================================================================
@@ -328,28 +429,40 @@ def _split_and_stage(audio_file: Path, item: QueueItem) -> Tuple[bool, Optional[
             item.processing = True
             item.downloaded = True
 
+        # Get stem mode for this item
+        stem_mode = item.stem_mode or app_state.get_config_value("stem_mode", DEFAULT_STEM_MODE)
+        stem_config = STEM_MODES.get(stem_mode, STEM_MODES[DEFAULT_STEM_MODE])
+
         # Run Demucs
-        vocals, accomp, err = run_demucs_separation(audio_file, tmp_root, item)
+        stems, err = run_demucs_separation(audio_file, tmp_root, item)
 
-        if vocals and accomp:
-            # Move to final destinations
-            vocals_dir = dest_dir_base / "vocals"
-            instr_dir = dest_dir_base / "instrumental"
-            vocals_dir.mkdir(parents=True, exist_ok=True)
-            instr_dir.mkdir(parents=True, exist_ok=True)
+        if stems:
+            # Move stems to final destinations
+            file_ext = None
+            for stem_name, stem_path in stems.items():
+                if file_ext is None:
+                    file_ext = stem_path.suffix
 
-            file_ext = vocals.suffix
-            vocals_out = vocals_dir / f"{song}{file_ext}"
-            instr_out = instr_dir / f"{song}{file_ext}"
+                # Map stem name to output directory
+                # For 2-stem mode: vocals -> vocals, no_vocals -> instrumental
+                if stem_mode == "2":
+                    if stem_name == "vocals":
+                        out_dir_name = "vocals"
+                    else:  # no_vocals, accompaniment, other
+                        out_dir_name = "instrumental"
+                else:
+                    # For 4/6 stem modes, use stem name as directory
+                    out_dir_name = stem_name
 
-            try:
-                shutil.move(str(vocals), str(vocals_out))
-            except Exception:
-                shutil.copy2(str(vocals), str(vocals_out))
-            try:
-                shutil.move(str(accomp), str(instr_out))
-            except Exception:
-                shutil.copy2(str(accomp), str(instr_out))
+                stem_out_dir = dest_dir_base / out_dir_name
+                stem_out_dir.mkdir(parents=True, exist_ok=True)
+
+                stem_out_path = stem_out_dir / f"{song}{file_ext}"
+
+                try:
+                    shutil.move(str(stem_path), str(stem_out_path))
+                except Exception:
+                    shutil.copy2(str(stem_path), str(stem_out_path))
 
             return True, None, dest_dir_base
         else:
@@ -454,7 +567,9 @@ def _process_youtube_item(item: QueueItem) -> None:
                 else:
                     dp = 0.01
 
-                if (now - last_emit["t"]) >= 0.08:
+                # Always emit the first progress update immediately, then throttle
+                is_first_update = last_emit["t"] == 0.0
+                if is_first_update or (now - last_emit["t"]) >= 0.08:
                     with app_state.lock:
                         item.download_progress = dp
                         item.progress = dp
@@ -679,10 +794,231 @@ async def set_cfg(req: Request):
         allowed["output_dir"] = data["output_dir"]
     if "default_folder" in data and isinstance(data["default_folder"], str):
         allowed["default_folder"] = data["default_folder"]
+    if "demucs_model" in data and isinstance(data["demucs_model"], str):
+        if data["demucs_model"] in DEMUCS_MODELS:
+            allowed["demucs_model"] = data["demucs_model"]
+    if "stem_mode" in data and isinstance(data["stem_mode"], str):
+        if data["stem_mode"] in STEM_MODES:
+            allowed["stem_mode"] = data["stem_mode"]
     if allowed:
         app_state.update_config(allowed)
         config.update(allowed)
     return app_state.get_config()
+
+
+# -----------------------------------------------------------------------------
+# Model Management Endpoints
+# -----------------------------------------------------------------------------
+
+def _get_demucs_cache_dir() -> Path:
+    """Get the Demucs model cache directory (follows torch hub conventions)."""
+    # Demucs uses torch.hub.load which caches to ~/.cache/torch/hub/checkpoints/
+    cache_home = os.environ.get("TORCH_HOME") or os.environ.get("XDG_CACHE_HOME")
+    if cache_home:
+        return Path(cache_home) / "torch" / "hub" / "checkpoints"
+    return Path.home() / ".cache" / "torch" / "hub" / "checkpoints"
+
+
+def _get_demucs_remote_dir() -> Path:
+    """Get the demucs remote config directory containing YAML model definitions."""
+    try:
+        import demucs
+        return Path(demucs.__file__).parent / "remote"
+    except ImportError:
+        return Path("/nonexistent")
+
+
+def _get_model_signatures(model_name: str) -> list[str]:
+    """Get the model file signatures required for a given model name.
+
+    Demucs models are defined in YAML files that reference signatures.
+    These signatures map to files like '{sig}-{checksum}.th' in the cache.
+    """
+    remote_dir = _get_demucs_remote_dir()
+    yaml_file = remote_dir / f"{model_name}.yaml"
+
+    if not yaml_file.exists():
+        return []
+
+    try:
+        import yaml
+        with open(yaml_file) as f:
+            data = yaml.safe_load(f)
+        # YAML contains {"models": ["sig1", "sig2", ...]}
+        return data.get("models", [])
+    except Exception:
+        return []
+
+
+def _is_model_downloaded(model_name: str) -> bool:
+    """Check if a Demucs model is fully downloaded.
+
+    Demucs caches model files with hash-based names like '955717e8-8726e21a.th'.
+    We need to check if all required signature files exist for the model.
+    """
+    cache_dir = _get_demucs_cache_dir()
+    if not cache_dir.exists():
+        return False
+
+    # Get required signatures from the model's YAML config
+    signatures = _get_model_signatures(model_name)
+    if not signatures:
+        return False
+
+    # Check if all required signature files exist
+    for sig in signatures:
+        # Files are named like "{sig}-{checksum}.th"
+        matches = list(cache_dir.glob(f"{sig}-*.th"))
+        if not matches:
+            return False
+
+    return True
+
+
+@app.get("/api/models")
+def api_get_models():
+    """Get available Demucs models with download status."""
+    models = []
+    current_model = app_state.get_config_value("demucs_model", DEFAULT_DEMUCS_MODEL)
+    current_stem_mode = app_state.get_config_value("stem_mode", DEFAULT_STEM_MODE)
+
+    for name, info in DEMUCS_MODELS.items():
+        models.append({
+            "name": name,
+            "stems": info["stems"],
+            "size_mb": info["size_mb"],
+            "description": info["description"],
+            "is_default": info.get("default", False),
+            "is_selected": name == current_model,
+            "downloaded": _is_model_downloaded(name),
+        })
+
+    stem_modes = []
+    for mode_id, mode_info in STEM_MODES.items():
+        stem_modes.append({
+            "id": mode_id,
+            "label": mode_info["label"],
+            "description": mode_info["description"],
+            "requires_model": mode_info.get("requires_model"),
+            "is_selected": mode_id == current_stem_mode,
+        })
+
+    return {
+        "models": models,
+        "stem_modes": stem_modes,
+        "current_model": current_model,
+        "current_stem_mode": current_stem_mode,
+    }
+
+
+def _download_model_sync(model_name: str, python_exe: str, env: dict) -> dict:
+    """Synchronous model download - runs in thread pool to avoid blocking."""
+    import wave
+    import struct
+
+    tmp_audio = Path(tempfile.gettempdir()) / f"splitboy_model_download_{model_name}.wav"
+    tmp_out = Path(tempfile.gettempdir()) / f"splitboy_model_download_out_{model_name}"
+    tmp_out.mkdir(parents=True, exist_ok=True)
+
+    try:
+        # Create minimal WAV file (1 second of silence at 44.1kHz mono)
+        with wave.open(str(tmp_audio), 'w') as wav:
+            wav.setnchannels(1)
+            wav.setsampwidth(2)
+            wav.setframerate(44100)
+            wav.writeframes(struct.pack('<' + 'h' * 44100, *([0] * 44100)))
+
+        # Run demucs to trigger model download
+        cmd = [
+            python_exe, "-m", "demucs.separate",
+            "-n", model_name,
+            "--mp3",
+            "-o", str(tmp_out),
+            str(tmp_audio)
+        ]
+
+        logger.info(f"Downloading model {model_name}...")
+        proc = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=600)
+
+        # Cleanup
+        try:
+            tmp_audio.unlink()
+            shutil.rmtree(tmp_out, ignore_errors=True)
+        except Exception:
+            pass
+
+        # Check if model files are now in cache
+        if _is_model_downloaded(model_name):
+            return {"success": True, "message": f"Model {model_name} downloaded successfully"}
+        elif proc.returncode == 0:
+            return {"success": True, "message": f"Model {model_name} downloaded successfully"}
+        else:
+            return {"success": False, "message": proc.stderr[-500:] if proc.stderr else "Download failed"}
+
+    except subprocess.TimeoutExpired:
+        if _is_model_downloaded(model_name):
+            return {"success": True, "message": f"Model {model_name} downloaded successfully"}
+        return {"success": False, "message": "Model download timed out (10 min limit)"}
+    except Exception as e:
+        if _is_model_downloaded(model_name):
+            return {"success": True, "message": f"Model {model_name} downloaded successfully"}
+        return {"success": False, "message": str(e)[:300]}
+
+
+@app.post("/api/models/download")
+async def api_download_model(req: Request):
+    """Trigger download of a Demucs model by running a dummy separation."""
+    import asyncio
+
+    data = await req.json()
+    model_name = data.get("model")
+
+    if not model_name or model_name not in DEMUCS_MODELS:
+        raise HTTPException(400, f"Invalid model: {model_name}")
+
+    if _is_model_downloaded(model_name):
+        return {"success": True, "message": f"Model {model_name} already downloaded"}
+
+    python_exe = sys.executable
+    env = os.environ.copy()
+
+    ffmpeg_dir = BASE_DIR.parent / "python_runtime_bundle" / "ffmpeg"
+    if ffmpeg_dir.exists():
+        env["PATH"] = f"{ffmpeg_dir}{os.pathsep}" + env.get("PATH", "")
+
+    # Run in thread pool to avoid blocking the event loop
+    result = await asyncio.to_thread(_download_model_sync, model_name, python_exe, env)
+    return result
+
+
+@app.delete("/api/models/{model_name}")
+def api_delete_model(model_name: str):
+    """Delete a downloaded model to free up space."""
+    if model_name not in DEMUCS_MODELS:
+        raise HTTPException(400, f"Invalid model: {model_name}")
+
+    if model_name == DEFAULT_DEMUCS_MODEL:
+        raise HTTPException(400, "Cannot delete the default model")
+
+    cache_dir = _get_demucs_cache_dir()
+    deleted = False
+
+    # Get the signatures for this model and delete corresponding files
+    signatures = _get_model_signatures(model_name)
+    if cache_dir.exists() and signatures:
+        for sig in signatures:
+            for f in cache_dir.glob(f"{sig}-*.th"):
+                try:
+                    f.unlink()
+                    deleted = True
+                    logger.info(f"Deleted model file: {f}")
+                except Exception as e:
+                    logger.warning(f"Failed to delete {f}: {e}")
+
+    if deleted:
+        return {"success": True, "message": f"Model {model_name} deleted"}
+    else:
+        return {"success": False, "message": f"Model {model_name} files not found"}
 
 
 # -----------------------------------------------------------------------------
@@ -844,9 +1180,14 @@ async def api_add_queue(req: Request):
     data = await req.json()
     urls = data.get("urls") or []
     folder = data.get("folder")
+    stem_mode = data.get("stem_mode")  # Optional per-job stem mode
 
     if not isinstance(urls, list) or not urls:
         raise HTTPException(400, "urls must be a non-empty array")
+
+    # Validate stem_mode if provided
+    if stem_mode and stem_mode not in STEM_MODES:
+        stem_mode = None
 
     added = []
     default_folder = app_state.get_config_value("default_folder", "")
@@ -856,6 +1197,7 @@ async def api_add_queue(req: Request):
             id=str(uuid.uuid4()),
             url=url,
             folder=folder or default_folder,
+            stem_mode=stem_mode,
         )
         app_state.add_to_queue(item)
         added.append(item.to_dict())
@@ -869,9 +1211,14 @@ async def api_add_queue_local(req: Request):
     data = await req.json()
     files = data.get("files") or []
     folder = data.get("folder")
+    stem_mode = data.get("stem_mode")  # Optional per-job stem mode
 
     if not isinstance(files, list) or not files:
         raise HTTPException(400, "files must be a non-empty array")
+
+    # Validate stem_mode if provided
+    if stem_mode and stem_mode not in STEM_MODES:
+        stem_mode = None
 
     added = []
     default_folder = app_state.get_config_value("default_folder", "")
@@ -887,6 +1234,7 @@ async def api_add_queue_local(req: Request):
             folder=folder or default_folder,
             local_file=True,
             local_path=file_path,
+            stem_mode=stem_mode,
         )
         app_state.add_to_queue(item)
         added.append(item.to_dict())

@@ -10,7 +10,7 @@ import platform
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from .constants import DEFAULT_CONCURRENCY
+from .constants import DEFAULT_CONCURRENCY, DEFAULT_DEMUCS_MODEL, DEFAULT_STEM_MODE
 
 
 def get_default_desktop_path() -> str:
@@ -65,6 +65,8 @@ class Config:
         "output_dir": "",  # Will be set to desktop on first access
         "default_folder": "",
         "max_concurrency": DEFAULT_CONCURRENCY,
+        "demucs_model": DEFAULT_DEMUCS_MODEL,
+        "stem_mode": DEFAULT_STEM_MODE,
     }
 
     def __init__(self, config_path: Path):

@@ -108,6 +108,410 @@ input[type="number"] {
   min-width: 220px;
 }
 
+/* Custom Select/Dropdown Styling */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: #0c1219;
+  border: 1px solid rgba(56, 71, 94, 0.5);
+  color: var(--text);
+  padding: 12px 40px 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  width: 100%;
+  outline: none;
+  transition: all 150ms ease;
+
+  /* Custom dropdown arrow */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%237a8ba0' d='M2 3.5L5 7l3-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 10px;
+}
+
+select:hover {
+  border-color: rgba(124, 143, 170, 0.6);
+  background-color: #0e151d;
+}
+
+select:focus {
+  border-color: rgba(96, 165, 250, 0.7);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.12);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%2360a5fa' d='M2 3.5L5 7l3-3.5'/%3E%3C/svg%3E");
+}
+
+select option {
+  background: #0c1219;
+  color: var(--text);
+  padding: 12px;
+}
+
+select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* =============================================================================
+   Settings Tab - Subtabs Navigation
+   ============================================================================= */
+
+.settings-subtabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.subtab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 10px 16px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: all 150ms ease;
+  box-shadow: none;
+  height: auto;
+}
+
+.subtab-btn:hover {
+  color: var(--text);
+  background: rgba(124, 143, 170, 0.08);
+  transform: none;
+  box-shadow: none;
+}
+
+.subtab-btn.active {
+  background: rgba(124, 143, 170, 0.15);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(124, 143, 170, 0.2);
+}
+
+.subtab-content {
+  display: none;
+}
+
+.subtab-content.active {
+  display: block;
+  animation: fadeIn 200ms ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* =============================================================================
+   Separation Config Card
+   ============================================================================= */
+
+.separation-config-card {
+  background: linear-gradient(145deg, rgba(14, 20, 28, 0.8) 0%, rgba(10, 14, 20, 0.9) 100%);
+  border: 1px solid rgba(56, 71, 94, 0.4);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.config-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.config-field > label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+}
+
+/* Model Status Bar */
+.model-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  border: 1px solid transparent;
+  transition: all 200ms ease;
+}
+
+.model-status-bar.ready {
+  border-color: rgba(74, 222, 128, 0.2);
+  background: rgba(74, 222, 128, 0.05);
+}
+
+.model-status-bar.missing {
+  border-color: rgba(251, 191, 36, 0.25);
+  background: rgba(251, 191, 36, 0.05);
+}
+
+.model-status-bar.downloading {
+  border-color: rgba(96, 165, 250, 0.25);
+  background: rgba(96, 165, 250, 0.05);
+}
+
+.model-status-bar .status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+
+.model-status-bar.ready .status-indicator {
+  background: #4ade80;
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+}
+
+.model-status-bar.missing .status-indicator {
+  background: #fbbf24;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.model-status-bar.downloading .status-indicator {
+  background: #60a5fa;
+  box-shadow: 0 0 8px rgba(96, 165, 250, 0.5);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Download Progress Bar */
+.download-progress-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.download-progress-text {
+  font-size: 12px;
+  color: #60a5fa;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.download-progress-text .spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(96, 165, 250, 0.2);
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.download-progress-bar {
+  height: 4px;
+  background: rgba(96, 165, 250, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.download-progress-bar .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #60a5fa, #818cf8);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.download-progress-bar .progress-fill.indeterminate {
+  width: 30%;
+  animation: indeterminate 1.5s ease-in-out infinite;
+}
+
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+.model-status-bar .status-text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.model-status-bar.ready .status-text {
+  color: #4ade80;
+}
+
+.model-status-bar.missing .status-text {
+  color: #fbbf24;
+}
+
+.quick-download-btn {
+  font-size: 11px !important;
+  font-weight: 600;
+  padding: 6px 14px !important;
+  height: 28px !important;
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.25) 0%, rgba(96, 165, 250, 0.15) 100%) !important;
+  border: 1px solid rgba(96, 165, 250, 0.4) !important;
+  color: #60a5fa !important;
+  box-shadow: none !important;
+}
+
+.quick-download-btn:hover {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.35) 0%, rgba(96, 165, 250, 0.2) 100%) !important;
+  border-color: rgba(96, 165, 250, 0.6) !important;
+  transform: none !important;
+}
+
+/* Stem Preview Chips */
+.stem-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.preview-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.stem-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.stem-chip {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(124, 143, 170, 0.12);
+  color: var(--muted);
+  border: 1px solid rgba(124, 143, 170, 0.15);
+}
+
+.stem-chip.vocals {
+  background: rgba(244, 114, 182, 0.15);
+  color: #f472b6;
+  border-color: rgba(244, 114, 182, 0.25);
+}
+
+.stem-chip.drums {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+  border-color: rgba(251, 146, 60, 0.25);
+}
+
+.stem-chip.bass {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.25);
+}
+
+.stem-chip.other {
+  background: rgba(96, 165, 250, 0.15);
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.25);
+}
+
+.stem-chip.piano {
+  background: rgba(167, 139, 250, 0.15);
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.25);
+}
+
+.stem-chip.guitar {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.25);
+}
+
+.stem-chip.instrumental {
+  background: rgba(45, 212, 191, 0.15);
+  color: #2dd4bf;
+  border-color: rgba(45, 212, 191, 0.25);
+}
+
+/* =============================================================================
+   Models Management Tab
+   ============================================================================= */
+
+.models-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.models-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* =============================================================================
+   General Settings Tab
+   ============================================================================= */
+
+.settings-section {
+  margin-bottom: 24px;
+}
+
+.settings-section h3 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+  margin: 0 0 12px 0;
+}
+
+.file-picker-row {
+  display: flex;
+  gap: 8px;
+}
+
+.file-picker-row input[type="text"] {
+  flex: 1;
+  cursor: pointer;
+}
+
+.ytdlp-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .file-picker-container {
   display: flex;
   gap: 8px;
@@ -1413,6 +1817,52 @@ h3 {
   }
 }
 
+/* Indeterminate progress bar animation - for when no progress data is available yet */
+@keyframes indeterminateSweep {
+  0% {
+    left: -30%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes indeterminatePulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.progress.indeterminate {
+  background: linear-gradient(90deg,
+    rgba(14, 20, 28, 1) 0%,
+    rgba(30, 41, 59, 0.5) 50%,
+    rgba(14, 20, 28, 1) 100%);
+  background-size: 200% 100%;
+  animation: indeterminateBackground 1.5s ease-in-out infinite;
+}
+
+@keyframes indeterminateBackground {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.progress .bar.indeterminate {
+  position: absolute;
+  animation: indeterminateSweep 1.2s ease-in-out infinite,
+             indeterminatePulse 1.2s ease-in-out infinite;
+  background: linear-gradient(90deg,
+    rgba(96, 165, 250, 0.3) 0%,
+    rgba(96, 165, 250, 0.9) 50%,
+    rgba(96, 165, 250, 0.3) 100%);
+  box-shadow: 0 0 20px rgba(96, 165, 250, 0.5),
+              0 0 10px rgba(96, 165, 250, 0.3);
+  border-radius: 999px;
+}
+
 /* Enhanced Status Dots with Pulsing Glow */
 .status-dot {
   transition: all 300ms ease;
@@ -1633,4 +2083,240 @@ h3 {
   .status-error {
     box-shadow: 0 0 10px rgba(248, 113, 113, 0.6);
   }
+}
+
+/* =============================================================================
+   Model Downloads List
+   ============================================================================= */
+
+.model-downloads-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.model-download-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, rgba(14, 20, 28, 0.9) 0%, rgba(10, 16, 24, 0.9) 100%);
+  border: 1px solid rgba(56, 71, 94, 0.5);
+  border-radius: 10px;
+  transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.model-download-item:hover {
+  border-color: rgba(124, 143, 170, 0.45);
+  background: linear-gradient(180deg, rgba(18, 26, 36, 0.95) 0%, rgba(14, 20, 28, 0.95) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.model-download-item.is-default {
+  border-color: rgba(96, 165, 250, 0.3);
+  background: linear-gradient(180deg, rgba(96, 165, 250, 0.05) 0%, rgba(14, 20, 28, 0.9) 100%);
+}
+
+.model-download-item .model-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.model-download-item .model-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-download-item .model-name .default-tag {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  background: rgba(96, 165, 250, 0.2);
+  color: #60a5fa;
+  border-radius: 4px;
+}
+
+.model-download-item .model-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.model-download-item .model-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.model-download-item .model-size {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 4px 8px;
+  background: rgba(124, 143, 170, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(124, 143, 170, 0.15);
+}
+
+.model-download-item .status-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.model-download-item .status-badge.downloaded {
+  background: rgba(74, 222, 128, 0.12);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+.model-download-item .status-badge.downloaded::before {
+  content: "✓";
+  font-size: 10px;
+}
+
+.model-download-item .status-badge.not-downloaded {
+  background: rgba(122, 139, 160, 0.1);
+  color: var(--muted);
+  border: 1px solid rgba(122, 139, 160, 0.2);
+}
+
+.model-download-item .status-badge.downloading {
+  background: rgba(96, 165, 250, 0.12);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+.model-download-item .status-badge.downloading .mini-spinner {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid rgba(96, 165, 250, 0.3);
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+/* Progress bar inside model item */
+.model-download-item .item-progress {
+  width: 100%;
+  height: 3px;
+  background: rgba(96, 165, 250, 0.1);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.model-download-item .item-progress .bar {
+  height: 100%;
+  width: 30%;
+  background: linear-gradient(90deg, #60a5fa, #818cf8);
+  border-radius: 2px;
+  animation: indeterminate 1.5s ease-in-out infinite;
+}
+
+.model-download-item button.download-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 14px;
+  height: 28px;
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.2) 0%, rgba(96, 165, 250, 0.1) 100%);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  color: #60a5fa;
+}
+
+.model-download-item button.download-btn:hover {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.3) 0%, rgba(96, 165, 250, 0.15) 100%);
+  border-color: rgba(96, 165, 250, 0.5);
+  box-shadow: 0 2px 8px rgba(96, 165, 250, 0.2);
+}
+
+.model-download-item button.delete-btn {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 6px 10px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: rgba(248, 113, 113, 0.8);
+}
+
+.model-download-item button.delete-btn:hover {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #f87171;
+}
+
+/* Model/stem info description rows */
+.model-info-row,
+.stem-info-row {
+  margin-top: -4px;
+  margin-bottom: 16px;
+}
+
+#model-description,
+#stem-description {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 8px 12px;
+  background: rgba(124, 143, 170, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid rgba(96, 165, 250, 0.4);
+}
+
+#model-status {
+  font-size: 11px;
+  font-weight: 500;
+  margin-left: 12px;
+}
+
+/* Stem mode selector per-job */
+.stem-mode-selector {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.stem-mode-selector button {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(124, 143, 170, 0.1);
+  border: 1px solid rgba(124, 143, 170, 0.2);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.stem-mode-selector button:hover {
+  background: rgba(124, 143, 170, 0.2);
+  border-color: rgba(124, 143, 170, 0.4);
+  color: var(--text);
+}
+
+.stem-mode-selector button.active {
+  background: rgba(96, 165, 250, 0.2);
+  border-color: rgba(96, 165, 250, 0.5);
+  color: #60a5fa;
 }

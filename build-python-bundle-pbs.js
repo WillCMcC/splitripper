@@ -395,7 +395,7 @@ if (platform === "darwin") {
       );
       // demucs may not have a universal wheel; try best-effort
       try {
-        execSync(`"${pbsPython}" -m pip install demucs`, {
+        execSync(`"${pbsPython}" -m pip install demucs diffq`, {
           stdio: "inherit",
           env: { ...process.env, MACOSX_DEPLOYMENT_TARGET: "14.0" },
         });
@@ -406,6 +406,78 @@ if (platform === "darwin") {
       }
     } catch (e) {
       console.warn("Audio stack install encountered an issue:", e.message);
+    }
+
+    // Pre-download the default htdemucs model so users don't have to wait after install
+    try {
+      console.log("Pre-downloading default htdemucs model (this may take a few minutes)...");
+
+      // Create a minimal test WAV file (1 second of silence)
+      const testWavDir = path.join(bundleDir, "test_audio");
+      fs.mkdirSync(testWavDir, { recursive: true });
+      const testWav = path.join(testWavDir, "silence.wav");
+
+      // Use Python to create the silent WAV file
+      const createWavScript = `
+import wave
+import struct
+with wave.open('${testWav.replace(/\\/g, "\\\\")}', 'w') as wav:
+    wav.setnchannels(1)
+    wav.setsampwidth(2)
+    wav.setframerate(44100)
+    wav.writeframes(struct.pack('<' + 'h' * 44100, *([0] * 44100)))
+print('Created test WAV file')
+`;
+      execSync(`"${pbsPython}" -c "${createWavScript}"`, { stdio: "inherit" });
+
+      // Run demucs on the test file to trigger model download
+      const testOutDir = path.join(testWavDir, "output");
+      fs.mkdirSync(testOutDir, { recursive: true });
+
+      execSync(
+        `"${pbsPython}" -m demucs.separate -n htdemucs --mp3 -o "${testOutDir}" "${testWav}"`,
+        {
+          stdio: "inherit",
+          env: { ...process.env, MACOSX_DEPLOYMENT_TARGET: "14.0" },
+          timeout: 600000, // 10 minute timeout
+        }
+      );
+
+      console.log("htdemucs model pre-downloaded successfully!");
+
+      // Clean up test files
+      fs.rmSync(testWavDir, { recursive: true, force: true });
+
+      // Copy the model files into the bundle for distribution
+      // htdemucs uses signature 955717e8
+      const userCacheDir = path.join(
+        process.env.HOME,
+        ".cache/torch/hub/checkpoints"
+      );
+      const bundledModelsDir = path.join(bundleDir, "models");
+      fs.mkdirSync(bundledModelsDir, { recursive: true });
+
+      // Find and copy the htdemucs model file (955717e8-*.th)
+      if (fs.existsSync(userCacheDir)) {
+        const files = fs.readdirSync(userCacheDir);
+        for (const file of files) {
+          if (file.startsWith("955717e8-") && file.endsWith(".th")) {
+            const src = path.join(userCacheDir, file);
+            const dst = path.join(bundledModelsDir, file);
+            fs.copyFileSync(src, dst);
+            console.log(`Bundled model file: ${file}`);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Model pre-download failed (will download on first use):", e.message);
+      // Clean up on failure
+      try {
+        const testWavDir = path.join(bundleDir, "test_audio");
+        if (fs.existsSync(testWavDir)) {
+          fs.rmSync(testWavDir, { recursive: true, force: true });
+        }
+      } catch {}
     }
 
     // Download ffmpeg binaries
