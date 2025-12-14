@@ -60,6 +60,17 @@ export function setupSearchHandler() {
   const btnSearch = document.querySelector("#btn-search");
   if (!btnSearch) return;
 
+  // Add Enter key support for search input
+  const searchInput = document.querySelector("#search-query");
+  if (searchInput) {
+    searchInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        btnSearch.click();
+      }
+    });
+  }
+
   btnSearch.addEventListener("click", async () => {
     const q = (document.querySelector("#search-query")?.value || "").trim();
     if (!q) return;
@@ -94,6 +105,17 @@ export function setupSearchHandler() {
 export function setupPlaylistHandler() {
   const btnPlaylist = document.querySelector("#btn-playlist");
   if (!btnPlaylist) return;
+
+  // Add Enter key support for playlist URL input
+  const playlistInput = document.querySelector("#playlist-url");
+  if (playlistInput) {
+    playlistInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        btnPlaylist.click();
+      }
+    });
+  }
 
   btnPlaylist.addEventListener("click", async () => {
     const url = (document.querySelector("#playlist-url")?.value || "").trim();

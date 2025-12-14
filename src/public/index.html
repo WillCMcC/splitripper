@@ -23,50 +23,51 @@
 
     <main>
       <section class="left">
-        <nav class="tabs">
-          <button class="tab-button active" data-tab="local-files">
+        <nav class="tabs" role="tablist" aria-label="Main navigation">
+          <button class="tab-button active" data-tab="local-files" role="tab" aria-selected="true" aria-controls="local-files-tab">
             Local Files
           </button>
-          <button class="tab-button" data-tab="search">Search</button>
-          <button class="tab-button" data-tab="settings">Settings</button>
+          <button class="tab-button" data-tab="search" role="tab" aria-selected="false" aria-controls="search-tab">Search</button>
+          <button class="tab-button" data-tab="settings" role="tab" aria-selected="false" aria-controls="settings-tab">Settings</button>
         </nav>
 
-        <div class="tab-content" id="search-tab">
+        <div class="tab-content" id="search-tab" role="tabpanel" aria-labelledby="search-tab">
           <h2>Search YouTube</h2>
           <div class="row">
             <input
               id="search-query"
               type="text"
               placeholder="Search YouTube..."
+              aria-label="Search YouTube"
             />
-            <button id="btn-search" class="secondary">Search</button>
+            <button id="btn-search" class="secondary" aria-label="Search YouTube">Search</button>
           </div>
           <div class="row">
-            <input id="playlist-url" type="text" placeholder="Playlist URL" />
-            <button id="btn-playlist" class="secondary">Load playlist</button>
+            <input id="playlist-url" type="text" placeholder="Playlist URL" aria-label="Playlist URL" />
+            <button id="btn-playlist" class="secondary" aria-label="Load playlist">Load playlist</button>
           </div>
           <div class="row">
-            <button id="btn-add-all" class="secondary" style="display: none">
+            <button id="btn-add-all" class="secondary" style="display: none" aria-label="Add all results to queue">
               Add all to queue
             </button>
-            <span id="results-meta" class="muted"></span>
+            <span id="results-meta" class="muted" aria-live="polite"></span>
           </div>
-          <div id="results" class="list"></div>
+          <div id="results" class="list" role="list" aria-label="Search results"></div>
         </div>
 
-        <div class="tab-content active" id="local-files-tab">
+        <div class="tab-content active" id="local-files-tab" role="tabpanel" aria-labelledby="local-files-tab">
           <div class="tab-header">
             <div class="tab-title-section">
               <h2>Local Files</h2>
               <p class="muted">Add local audio files</p>
             </div>
-            <button id="btn-choose-folder" class="secondary choose-folder-btn">
+            <button id="btn-choose-folder" class="secondary choose-folder-btn" aria-label="Choose folder to add audio files">
               Choose Folder
             </button>
           </div>
 
           <div class="row local-select-row">
-            <div id="drop-zone" class="drop-zone" aria-label="Drop audio files">
+            <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="Drop audio files or click to browse">
               Drop tracks • Click to browse
             </div>
           </div>
@@ -76,20 +77,21 @@
               id="btn-add-local-all"
               class="secondary"
               style="display: none"
+              aria-label="Add all local files to queue"
             >
               Add all to queue
             </button>
-            <span id="local-files-meta" class="muted"></span>
+            <span id="local-files-meta" class="muted" aria-live="polite"></span>
           </div>
 
-          <div id="local-files-list" class="list"></div>
+          <div id="local-files-list" class="list" role="list" aria-label="Local files list"></div>
         </div>
 
-        <div class="tab-content" id="settings-tab">
-          <nav class="settings-subtabs">
-            <button class="subtab-btn active" data-subtab="separation">Separation</button>
-            <button class="subtab-btn" data-subtab="models">Models</button>
-            <button class="subtab-btn" data-subtab="general">General</button>
+        <div class="tab-content" id="settings-tab" role="tabpanel" aria-labelledby="settings-tab">
+          <nav class="settings-subtabs" role="tablist" aria-label="Settings categories">
+            <button class="subtab-btn active" data-subtab="separation" role="tab" aria-selected="true" aria-controls="subtab-separation">Separation</button>
+            <button class="subtab-btn" data-subtab="models" role="tab" aria-selected="false" aria-controls="subtab-models">Models</button>
+            <button class="subtab-btn" data-subtab="general" role="tab" aria-selected="false" aria-controls="subtab-general">General</button>
           </nav>
 
           <!-- Separation Settings -->
@@ -179,26 +181,26 @@
         <div class="queue-container">
           <h2>Queue</h2>
           <div class="row">
-            <div class="progress">
+            <div class="progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Processing progress">
               <div id="global-progress-bar" class="bar" style="width: 0%"></div>
             </div>
-            <span id="concurrency-status" class="muted">active 0 / 6</span>
-            <span id="global-progress-text" class="muted">0%</span>
+            <span id="concurrency-status" class="muted" aria-live="polite">active 0 / 6</span>
+            <span id="global-progress-text" class="muted" aria-live="polite">0%</span>
           </div>
           <div class="row queue-controls-row">
-            <div class="btn-group">
-              <button id="btn-start" class="secondary">Start</button>
-              <button id="btn-stop" class="secondary">Stop</button>
-              <button id="btn-clear" class="secondary">Clear</button>
-              <button id="btn-retry-all" class="secondary">
+            <div class="btn-group" role="group" aria-label="Queue controls">
+              <button id="btn-start" class="secondary" aria-label="Start processing queue">Start</button>
+              <button id="btn-stop" class="secondary" aria-label="Stop processing queue">Stop</button>
+              <button id="btn-clear" class="secondary" aria-label="Clear queue">Clear</button>
+              <button id="btn-retry-all" class="secondary" aria-label="Retry all failed items">
                 Retry all failed
               </button>
             </div>
           </div>
           <div class="row queue-counts-row">
-            <span id="queue-counts" class="muted"></span>
+            <span id="queue-counts" class="muted" aria-live="polite"></span>
           </div>
-          <div id="queue" class="queue"></div>
+          <div id="queue" class="queue" role="list" aria-label="Processing queue"></div>
         </div>
       </section>
     </main>

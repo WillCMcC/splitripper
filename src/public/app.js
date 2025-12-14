@@ -61,12 +61,16 @@ async function boot() {
               method: "POST",
               body: JSON.stringify({ output_dir: selectedPath }),
             });
-          } catch {}
+          } catch (e) {
+            console.warn("Failed to save initial output directory to server:", e);
+          }
         }
       }
       localStorage.setItem("ytdl_first_run_prompt_done", "1");
     }
-  } catch {}
+  } catch (e) {
+    console.warn("First-run prompt failed:", e);
+  }
 
   // Initialize concurrency UI if present
   setupConcurrencyUI();
@@ -94,7 +98,9 @@ async function setupConcurrencyUI() {
         method: "POST",
         body: JSON.stringify({ max: 6 }),
       });
-    } catch {}
+    } catch (e) {
+      console.warn("Failed to set initial concurrency:", e);
+    }
 
     const data = await api("/api/concurrency");
     const input = document.querySelector("#concurrency-input");
@@ -125,7 +131,9 @@ async function setupConcurrencyUI() {
             const max = (p.concurrency && p.concurrency.max) || 6;
             input.value = String(max);
             if (label) label.textContent = `Parallel downloads: ${max}`;
-          } catch {}
+          } catch (refreshErr) {
+            console.warn("Failed to refresh concurrency value:", refreshErr);
+          }
           console.error("Failed to set concurrency:", e);
           const status = document.querySelector("#concurrency-status");
           if (status) status.textContent = "Failed to set concurrency";
@@ -143,7 +151,9 @@ async function setupConcurrencyUI() {
 
     if (label) label.textContent = `Parallel downloads: ${data.max ?? 6}`;
     if (status) status.textContent = `active ${data.active ?? 0} / ${data.max ?? 6}`;
-  } catch {}
+  } catch (e) {
+    console.warn("Failed to initialize concurrency UI:", e);
+  }
 }
 
 /**

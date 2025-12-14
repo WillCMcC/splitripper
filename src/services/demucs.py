@@ -5,15 +5,19 @@ Handles audio separation using Demucs with progress tracking.
 """
 
 import os
+import queue
 import re
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 from lib.constants import DEMUCS_MODELS, DEFAULT_DEMUCS_MODEL, STEM_MODES, DEFAULT_STEM_MODE
 from lib.logging_config import get_logger
 from lib.state import app_state, QueueItem
+from lib.utils import parse_time_to_seconds
 
 logger = get_logger("services.demucs")
 
@@ -49,26 +53,11 @@ def parse_demucs_progress(line: str) -> Tuple[Optional[float], Optional[int]]:
         eta_sec = None
         m3 = re.search(r"\[(?:[0-9:]+)\s*<\s*([0-9:]+)\s*,", s)
         if m3:
-            eta_sec = _parse_time_to_seconds(m3.group(1))
+            eta_sec = parse_time_to_seconds(m3.group(1))
 
         return prog, eta_sec
     except Exception:
         return None, None
-
-
-def _parse_time_to_seconds(ts: str) -> Optional[int]:
-    """Parse HH:MM:SS or MM:SS to seconds."""
-    try:
-        parts = [int(p) for p in ts.strip().split(":")]
-        if len(parts) == 3:
-            h, m, s = parts
-        elif len(parts) == 2:
-            h, m, s = 0, parts[0], parts[1]
-        else:
-            return None
-        return max(0, h * 3600 + m * 60 + s)
-    except Exception:
-        return None
 
 
 def run_demucs_separation(
@@ -93,6 +82,9 @@ def run_demucs_separation(
     """
     python_exe = sys.executable
     env = os.environ.copy()
+
+    # Set Python unbuffered mode for real-time output
+    env["PYTHONUNBUFFERED"] = "1"
 
     # Get model and stem mode from config if not specified
     if model is None:
@@ -151,49 +143,155 @@ def run_demucs_separation(
 
         proc = subprocess.Popen(
             cmd,
+            stdin=subprocess.DEVNULL,  # CRITICAL: Prevent blocking on stdin
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             env=env,
             bufsize=1,
-            universal_newlines=True
+            close_fds=True,  # Prevent child processes from inheriting pipe FDs
+            start_new_session=True,  # Isolate from parent process signals (macOS/Linux)
         )
+
+        # Register process for cleanup on stop
+        app_state.register_process(item.id, proc)
 
         last_progress = 0.0
         error_lines = []
 
-        for line in iter(proc.stdout.readline, ''):
-            if not line:
+        # Use a thread to read stdout - this prevents blocking issues on macOS
+        # when the subprocess finishes but we're waiting on readline()
+        output_queue = queue.Queue()
+
+        def reader_thread():
+            """Read lines from stdout and put them in a queue."""
+            try:
+                for line in proc.stdout:
+                    output_queue.put(line)
+            except Exception as e:
+                logger.warning(f"Reader thread exception: {e}")
+            finally:
+                output_queue.put(None)  # Signal end of output
+
+        reader = threading.Thread(target=reader_thread, daemon=True)
+        reader.start()
+
+        # Process output from the queue while waiting for completion
+        # Key insight: don't rely solely on reader thread EOF - check poll() actively
+        process_finished = False
+        finish_time = None
+        start_time = time.time()
+        last_status_log = start_time
+        DRAIN_TIMEOUT = 3.0  # Seconds to drain queue after process exits
+        MAX_TIMEOUT = 3600.0  # 1 hour max - htdemucs_ft on CPU can be slow for long songs
+        STATUS_LOG_INTERVAL = 30.0  # Log status every 30 seconds
+
+        while True:
+            # Periodic status log for debugging hangs
+            now = time.time()
+            if now - last_status_log > STATUS_LOG_INTERVAL:
+                logger.info(f"Demucs loop status: elapsed={now - start_time:.1f}s, "
+                           f"process_finished={process_finished}, poll={proc.poll()}, "
+                           f"progress={last_progress:.2f}, queue_size={output_queue.qsize()}")
+                last_status_log = now
+
+            # Check for overall timeout to prevent infinite hangs
+            elapsed = time.time() - start_time
+            if elapsed > MAX_TIMEOUT:
+                logger.error(f"Demucs overall timeout reached ({MAX_TIMEOUT}s), killing process")
+                proc.kill()
+                proc.wait()
+                app_state.unregister_process(item.id)
+                return None, f"Demucs timed out after {int(elapsed)}s"
+
+            # Check for stop event (user cancelled)
+            if app_state.stop_event.is_set():
+                logger.info("Stop event detected, killing Demucs process")
+                proc.kill()
+                proc.wait()
+                app_state.unregister_process(item.id)
+                return None, "Cancelled by user"
+
+            # Actively check if process has finished (don't wait for reader EOF)
+            if not process_finished:
+                poll_result = proc.poll()
+                if poll_result is not None:
+                    process_finished = True
+                    finish_time = time.time()
+                    logger.info(f"Demucs process exited with code {poll_result}")
+
+            # If process finished, enforce drain timeout
+            if process_finished and (time.time() - finish_time) > DRAIN_TIMEOUT:
+                logger.info("Drain timeout reached, proceeding to completion")
                 break
-            line = line.strip()
-            if line:
-                logger.debug(f"[DEMUCS] {line}")
-                error_lines.append(line)
 
-                # Update progress
-                prog, eta_sec = parse_demucs_progress(line)
-                if prog is not None and prog > last_progress:
-                    last_progress = prog
-                    with app_state.lock:
-                        item.progress = prog
-                        item.processing = True
-                        item.downloaded = True
-                        if eta_sec is not None:
-                            item.processing_eta_sec = int(eta_sec)
+            try:
+                line = output_queue.get(timeout=0.5)
+                if line is None:
+                    # Reader thread finished (EOF)
+                    logger.info("Reader thread signaled EOF")
+                    break
+                line = line.strip()
+                if line:
+                    logger.debug(f"[DEMUCS] {line}")
+                    error_lines.append(line)
 
-        proc.wait()
+                    # Update progress
+                    prog, eta_sec = parse_demucs_progress(line)
+                    if prog is not None and prog > last_progress:
+                        last_progress = prog
+                        with app_state.lock:
+                            item.progress = prog
+                            item.processing = True
+                            item.downloaded = True
+                            if eta_sec is not None:
+                                item.processing_eta_sec = int(eta_sec)
+            except queue.Empty:
+                # No output available - loop will check poll() on next iteration
+                pass
+
+        # Close stdout first to unblock reader thread
+        logger.info("Closing stdout pipe...")
+        if proc.stdout and not proc.stdout.closed:
+            proc.stdout.close()
+
+        # Wait for reader thread to finish (should be quick now that stdout is closed)
+        logger.info("Waiting for reader thread to finish...")
+        reader.join(timeout=2.0)
+        if reader.is_alive():
+            logger.warning("Reader thread still alive after join timeout")
+
+        # Now wait for process (should already be done)
+        logger.info(f"Waiting for process to finish (poll={proc.poll()})...")
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            logger.warning("Process didn't exit cleanly after 10s, killing...")
+            proc.kill()
+            proc.wait()
+
+        # Unregister process from cleanup list
+        app_state.unregister_process(item.id)
+
+        logger.info(f"Demucs process finished with return code: {proc.returncode}")
 
         if proc.returncode != 0:
             error_msg = '\n'.join(error_lines[-5:]) if error_lines else "demucs failed"
+            logger.error(f"Demucs failed: {error_msg}")
             return None, error_msg[:300]
 
         # Find output files based on stem mode
+        logger.debug(f"Looking for outputs in {output_dir} for stem_mode={stem_mode}, model={model}")
         stems = _find_demucs_outputs(output_dir, stem_mode, model)
         if stems:
+            logger.info(f"Found {len(stems)} stem files: {list(stems.keys())}")
             return stems, None
+        logger.error(f"No stems found in {output_dir}")
         return None, "demucs outputs not found"
 
     except Exception as e:
+        # Ensure process is unregistered on any exception
+        app_state.unregister_process(item.id)
         return None, str(e)[:300]
 
 

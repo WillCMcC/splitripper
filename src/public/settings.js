@@ -45,7 +45,7 @@ export function setupDirectoryPicker() {
             });
             console.log("Directory saved to server config");
           } catch (e) {
-            console.error("Failed to save directory to server:", e);
+            console.warn("Failed to save directory to server:", e);
           }
         }
       } else {
@@ -115,11 +115,15 @@ export function setupTabs() {
       const targetTab = button.dataset.tab;
 
       // Remove active class from all buttons and contents
-      tabButtons.forEach((btn) => btn.classList.remove("active"));
+      tabButtons.forEach((btn) => {
+        btn.classList.remove("active");
+        btn.setAttribute("aria-selected", "false");
+      });
       tabContents.forEach((content) => content.classList.remove("active"));
 
       // Add active class to clicked button and corresponding content
       button.classList.add("active");
+      button.setAttribute("aria-selected", "true");
       const targetContent = document.getElementById(`${targetTab}-tab`);
       if (targetContent) {
         targetContent.classList.add("active");
@@ -139,10 +143,14 @@ export function setupSettingsSubtabs() {
     btn.addEventListener("click", () => {
       const target = btn.dataset.subtab;
 
-      subtabBtns.forEach((b) => b.classList.remove("active"));
+      subtabBtns.forEach((b) => {
+        b.classList.remove("active");
+        b.setAttribute("aria-selected", "false");
+      });
       subtabContents.forEach((c) => c.classList.remove("active"));
 
       btn.classList.add("active");
+      btn.setAttribute("aria-selected", "true");
       const content = document.getElementById(`subtab-${target}`);
       if (content) content.classList.add("active");
     });

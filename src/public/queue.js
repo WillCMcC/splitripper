@@ -9,6 +9,7 @@ import {
   updateAddAllResultsVisibility,
   updateAddAllLocalVisibility,
 } from './utils.js';
+import { DOWNLOAD_PROGRESS_WEIGHT, PROCESSING_PROGRESS_WEIGHT } from './constants.js';
 
 // Forward declaration for refreshQueue - will be set later
 let _refreshQueue = null;
@@ -70,6 +71,7 @@ export function renderQueue(queueState) {
   ordered.forEach((it) => {
     const row = document.createElement("div");
     row.className = "queue-item";
+    row.setAttribute("role", "listitem");
 
     const left = document.createElement("div");
     const title = document.createElement("div");
@@ -104,7 +106,7 @@ export function renderQueue(queueState) {
       bar.className = "bar";
 
       // Calculate overall progress through the entire pipeline
-      // 30% for download, 70% for processing - smooth monotonic progress
+      // Download phase weight and processing weight defined in constants.js
       let overallProgress = 0;
 
       // Track per-item progress to prevent regression
@@ -114,20 +116,20 @@ export function renderQueue(queueState) {
       if (it.status === "done") {
         overallProgress = 1.0; // 100% complete
       } else if (it.processing) {
-        // Processing phase: download is complete (30%) + splitting progress (30-100%)
+        // Processing phase: download is complete + splitting progress
         // The server provides granular splitting progress in item.progress (0-0.99)
         const splitProgress = it.progress || 0;
-        overallProgress = 0.3 + splitProgress * 0.7; // Scale splitting to 30-99.3%
+        overallProgress = DOWNLOAD_PROGRESS_WEIGHT + splitProgress * PROCESSING_PROGRESS_WEIGHT;
       } else if (it.downloaded) {
-        // Downloaded but not yet processing: 30% complete
-        overallProgress = 0.3;
+        // Downloaded but not yet processing: download weight complete
+        overallProgress = DOWNLOAD_PROGRESS_WEIGHT;
       } else {
-        // Download phase: scale download_progress to first 30% of overall progress
+        // Download phase: scale download_progress to first portion of overall progress
         const dlFrac =
           typeof it.download_progress === "number"
             ? it.download_progress
             : it.progress || 0;
-        overallProgress = (dlFrac || 0) * 0.3; // Download is 30% of total process
+        overallProgress = (dlFrac || 0) * DOWNLOAD_PROGRESS_WEIGHT;
       }
 
       // Prevent individual item progress regression, but allow phase transitions
@@ -136,14 +138,14 @@ export function renderQueue(queueState) {
 
         // Allow progress reset in these cases:
         // 1. Item restarted (error or queued state)
-        // 2. Transitioning from download to processing phase (around 30% mark)
+        // 2. Transitioning from download to processing phase (around download weight mark)
         // 3. Major status change that indicates restart
         if (it.status === "error" || it.status === "queued") {
           // Item restarted - allow full reset
         } else if (
           it.processing &&
-          lastProgress <= 0.35 &&
-          overallProgress >= 0.3
+          lastProgress <= DOWNLOAD_PROGRESS_WEIGHT + 0.05 &&
+          overallProgress >= DOWNLOAD_PROGRESS_WEIGHT
         ) {
           // Transitioning into processing - allow the transition
         } else {
@@ -216,7 +218,19 @@ export function renderQueue(queueState) {
 
       const procText = document.createElement("span");
       procText.className = "phase-badge processing-badge";
-      procText.textContent = "Splitting tracks...";
+
+      // Show different message based on progress stage
+      // When progress is at or near max (0.99), show "Finalizing..." to indicate
+      // Demucs is in the separation/writing phase (no progress output)
+      const splitProgress = it.progress || 0;
+      if (splitProgress >= 0.95) {
+        procText.textContent = "Finalizing stems...";
+        procText.title = "AI separation in progress - this model may take several minutes";
+      } else if (splitProgress >= 0.5) {
+        procText.textContent = "Separating audio...";
+      } else {
+        procText.textContent = "Splitting tracks...";
+      }
       phaseRow.appendChild(procText);
 
       // Show ETA for processing when available
@@ -229,6 +243,12 @@ export function renderQueue(queueState) {
         eta.className = "phase-badge eta-badge";
         eta.textContent = `~${fmtDuration(it.processing_eta_sec)} left`;
         phaseRow.appendChild(eta);
+      } else if (splitProgress >= 0.95) {
+        // Show a "still working" indicator when at 95%+ with no ETA
+        const workingNote = document.createElement("span");
+        workingNote.className = "phase-badge eta-badge working-indicator";
+        workingNote.textContent = "Still processing...";
+        phaseRow.appendChild(workingNote);
       }
     } else if (
       it.status !== "queued" &&
@@ -259,6 +279,7 @@ export function renderQueue(queueState) {
       const cancel = document.createElement("button");
       cancel.className = "secondary";
       cancel.textContent = "Cancel";
+      cancel.setAttribute("aria-label", `Cancel "${it.title || it.url}"`);
       cancel.addEventListener("click", async () => {
         try {
           await api(`/api/cancel/${encodeURIComponent(it.id)}`, {
@@ -276,6 +297,7 @@ export function renderQueue(queueState) {
     if (it.status === "error") {
       const retry = document.createElement("button");
       retry.textContent = "Retry";
+      retry.setAttribute("aria-label", `Retry "${it.title || it.url}"`);
       retry.addEventListener("click", async () => {
         try {
           // Re-enqueue the same URL

@@ -4,12 +4,14 @@ Config endpoints for SplitBoy API.
 Handles reading and updating application configuration.
 """
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 
-from lib.constants import DEMUCS_MODELS, STEM_MODES
+from lib.logging_config import get_logger
+from lib.models import ConfigUpdateRequest
 from lib.state import app_state
 
 router = APIRouter()
+logger = get_logger("routes.config")
 
 
 @router.get("/config")
@@ -19,7 +21,7 @@ def get_cfg():
 
 
 @router.post("/config")
-async def set_cfg(req: Request):
+def set_cfg(req: ConfigUpdateRequest):
     """Update configuration settings."""
     # Import config here to avoid circular imports
     from lib.config import Config
@@ -29,22 +31,12 @@ async def set_cfg(req: Request):
     CONFIG_PATH = BASE_DIR / "config.json"
     config = Config(CONFIG_PATH)
 
-    data = await req.json()
-    allowed = {}
+    # Get non-None values from validated request
+    updates = req.model_dump(exclude_none=True)
 
-    if "output_dir" in data and isinstance(data["output_dir"], str):
-        allowed["output_dir"] = data["output_dir"]
-    if "default_folder" in data and isinstance(data["default_folder"], str):
-        allowed["default_folder"] = data["default_folder"]
-    if "demucs_model" in data and isinstance(data["demucs_model"], str):
-        if data["demucs_model"] in DEMUCS_MODELS:
-            allowed["demucs_model"] = data["demucs_model"]
-    if "stem_mode" in data and isinstance(data["stem_mode"], str):
-        if data["stem_mode"] in STEM_MODES:
-            allowed["stem_mode"] = data["stem_mode"]
-
-    if allowed:
-        app_state.update_config(allowed)
-        config.update(allowed)
+    if updates:
+        app_state.update_config(updates)
+        config.update(updates)
+        logger.info(f"Configuration updated: {list(updates.keys())}")
 
     return app_state.get_config()

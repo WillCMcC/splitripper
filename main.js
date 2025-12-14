@@ -9,9 +9,31 @@ const { app, BrowserWindow } = require("electron");
 
 // Import modules from electron/
 const { startServer, stopServer, getServerProcess } = require("./electron/server");
-const { createWindow, getMainWindow } = require("./electron/window");
+const { createWindow } = require("./electron/window");
 const { createTray } = require("./electron/tray");
 const { registerIpcHandlers } = require("./electron/ipc-handlers");
+
+// Track if we're already quitting to prevent multiple shutdown attempts
+let isQuitting = false;
+
+/**
+ * Gracefully shutdown the application
+ * Ensures server is stopped before exiting
+ */
+async function gracefulShutdown() {
+  if (isQuitting) return;
+  isQuitting = true;
+
+  console.log("Initiating graceful shutdown...");
+
+  try {
+    await stopServer();
+  } catch (err) {
+    console.error("Error during shutdown:", err);
+  }
+
+  app.exit(0);
+}
 
 // Handle app events
 app.whenReady().then(async () => {
@@ -33,34 +55,18 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => {
-  stopServer();
   if (process.platform !== "darwin") {
-    app.quit();
+    gracefulShutdown();
   }
 });
 
-app.on("before-quit", async (e) => {
-  try {
+app.on("before-quit", (e) => {
+  if (!isQuitting) {
     e.preventDefault();
-  } catch {}
-  await stopServer();
-  app.exit(0);
+    gracefulShutdown();
+  }
 });
 
-app.on("will-quit", () => {
-  stopServer();
-});
-
-// Also handle process-level exits and signals to ensure cleanup
-process.on("SIGINT", () => {
-  stopServer();
-  app.quit();
-});
-
-process.on("SIGTERM", () => {
-  stopServer();
-});
-
-process.on("exit", () => {
-  stopServer();
-});
+// Handle process-level signals to ensure cleanup
+process.on("SIGINT", gracefulShutdown);
+process.on("SIGTERM", gracefulShutdown);

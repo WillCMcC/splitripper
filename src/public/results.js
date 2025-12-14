@@ -28,11 +28,13 @@ export function renderResults(items) {
   items.forEach((it, idx) => {
     const div = document.createElement("div");
     div.className = "item";
+    div.setAttribute("role", "listitem");
 
     const addButton = document.createElement("button");
     addButton.className = "add-button";
     addButton.innerHTML = "+";
     addButton.title = "Add to queue";
+    addButton.setAttribute("aria-label", `Add "${it.title || it.url}" to queue`);
     addButton.addEventListener("click", async () => {
       try {
         // Optimistic UI

@@ -18,6 +18,7 @@ from lib.constants import STEM_MODES, DEFAULT_STEM_MODE
 from lib.logging_config import get_logger
 from lib.metadata import extract_audio_metadata, get_title_from_path
 from lib.state import app_state, QueueItem
+from lib.utils import sanitize_filename, parse_artist_song
 
 from services.demucs import run_demucs_separation
 
@@ -25,8 +26,8 @@ logger = get_logger("services.worker")
 
 BASE_DIR = Path(__file__).parent.parent.resolve()
 
-# Semaphore to limit parallel Demucs operations (resource-intensive)
-split_semaphore = threading.Semaphore(1)
+# Note: Demucs operations now run in parallel based on max_concurrency setting.
+# Previously had a Semaphore(1) but the "hangs" were actually just slow htdemucs_ft processing.
 
 # Load ytdl helpers
 import importlib.util
@@ -36,27 +37,6 @@ _spec = importlib.util.spec_from_file_location(
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 get_video_info = getattr(_mod, "get_video_info")
-
-
-def _sanitize_name(name: str, max_length: int = 120) -> str:
-    """Sanitize a string for use as a filename."""
-    s = re.sub(r'[<>:"/\\|?*]', "_", name or "").strip().strip(".")
-    return re.sub(r"\s+", " ", s).strip()[:max_length] or "untitled"
-
-
-def _parse_artist_song(title: Optional[str], channel: Optional[str]) -> Tuple[Optional[str], str]:
-    """Parse artist and song from title string."""
-    base = (title or "").strip()
-    if not base:
-        return (channel or None), "untitled"
-
-    m = re.match(r"\s*([^\-\u2013\u2014]+)\s*[\-\u2013\u2014]\s*(.+)", base)
-    if m:
-        artist = _sanitize_name(m.group(1).strip())
-        song = _sanitize_name(m.group(2).strip())
-        return (artist or (channel or None)), song
-
-    return ((channel and _sanitize_name(channel)) or None, _sanitize_name(base))
 
 
 def _split_and_stage(audio_file: Path, item: QueueItem) -> Tuple[bool, Optional[str], Optional[Path]]:
@@ -76,12 +56,12 @@ def _split_and_stage(audio_file: Path, item: QueueItem) -> Tuple[bool, Optional[
 
         # Determine artist and song names
         if item.local_file:
-            artist = _sanitize_name(item.channel) if item.channel else None
-            song = _sanitize_name(item.title or "untitled")
+            artist = sanitize_filename(item.channel) if item.channel else None
+            song = sanitize_filename(item.title or "untitled")
             if not artist:
-                artist, song = _parse_artist_song(item.title, None)
+                artist, song = parse_artist_song(item.title, None)
         else:
-            artist, song = _parse_artist_song(item.title, item.channel)
+            artist, song = parse_artist_song(item.title, item.channel)
 
         dest_dir_base = out_root / (artist if artist else "")
 
@@ -97,8 +77,10 @@ def _split_and_stage(audio_file: Path, item: QueueItem) -> Tuple[bool, Optional[
         stem_mode = item.stem_mode or app_state.get_config_value("stem_mode", DEFAULT_STEM_MODE)
         stem_config = STEM_MODES.get(stem_mode, STEM_MODES[DEFAULT_STEM_MODE])
 
-        # Run Demucs
+        # Run Demucs (parallel operations allowed based on max_concurrency)
+        logger.info(f"Starting Demucs for: {item.title or item.id}")
         stems, err = run_demucs_separation(audio_file, tmp_root, item)
+        logger.info(f"Demucs returned for {item.title or item.id}: stems={bool(stems)}, err={err}")
 
         if stems:
             # Move stems to final destinations
@@ -365,6 +347,9 @@ def download_worker():
                         if item.status == "queued":
                             item.status = "canceled"
                     break
+
+                # Cleanup completed threads to prevent memory leak
+                threads = [t for t in threads if t.is_alive()]
 
                 # Launch new items up to max_concurrency
                 can_launch = max(0, app_state.max_concurrency - app_state.active)

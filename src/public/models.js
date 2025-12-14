@@ -40,7 +40,12 @@ export function renderModelSelector(data) {
   const select = $("#cfg-demucs-model");
   if (!select) return;
 
-  const currentValue = select.value;
+  // Track if this is initial load using a data attribute marker
+  // On initial load, we trust the server's is_selected flags
+  // On subsequent renders (e.g., after model download), we preserve user's selection
+  const isInitialLoad = !select.dataset.serverLoaded;
+  const currentValue = isInitialLoad ? null : select.value;
+
   select.innerHTML = "";
 
   for (const model of data.models) {
@@ -53,19 +58,29 @@ export function renderModelSelector(data) {
     select.appendChild(opt);
   }
 
-  // Restore selection if possible, and sync current_model to match
-  if (currentValue && [...select.options].some(o => o.value === currentValue)) {
+  // Only restore previous selection if NOT initial load (user already interacted)
+  if (currentValue && !isInitialLoad && [...select.options].some(o => o.value === currentValue)) {
     select.value = currentValue;
-    // IMPORTANT: Sync current_model to match the restored dropdown value
+    // Sync current_model to match the restored dropdown value
     if (window.__modelsData) {
       window.__modelsData.current_model = currentValue;
       window.__modelsData.models.forEach(m => m.is_selected = m.name === currentValue);
     }
   }
 
+  // Mark that we've loaded from server (for next render)
+  select.dataset.serverLoaded = "true";
+
   // Remove old listener, add new
   const newSelect = select.cloneNode(true);
   select.parentNode.replaceChild(newSelect, select);
+
+  // Explicitly set the value after cloning - cloneNode doesn't reliably preserve
+  // the selected state set via JavaScript property assignment
+  const selectedModel = data.models.find(m => m.is_selected);
+  if (selectedModel) {
+    newSelect.value = selectedModel.name;
+  }
 
   newSelect.addEventListener("change", async () => {
     await handleModelChange(newSelect.value);
@@ -119,7 +134,13 @@ export function renderStemModeSelector(data) {
   const select = $("#cfg-stem-mode");
   if (!select) return;
 
-  const currentValue = select.value;
+  // Track if this is initial load using a data attribute marker
+  // HTML has hardcoded options (2/4/6), so we can't rely on options.length
+  // On initial load, we trust the server's is_selected flags
+  // On subsequent renders (e.g., after model download), we preserve user's selection
+  const isInitialLoad = !select.dataset.serverLoaded;
+  const currentValue = isInitialLoad ? null : select.value;
+
   select.innerHTML = "";
 
   for (const mode of data.stem_modes) {
@@ -130,8 +151,8 @@ export function renderStemModeSelector(data) {
     select.appendChild(opt);
   }
 
-  // Restore selection and sync state
-  if (currentValue && [...select.options].some(o => o.value === currentValue)) {
+  // Only restore previous selection if NOT initial load (user already interacted)
+  if (currentValue && !isInitialLoad && [...select.options].some(o => o.value === currentValue)) {
     select.value = currentValue;
     if (window.__modelsData) {
       window.__modelsData.current_stem_mode = currentValue;
@@ -139,8 +160,18 @@ export function renderStemModeSelector(data) {
     }
   }
 
+  // Mark that we've loaded from server (for next render)
+  select.dataset.serverLoaded = "true";
+
   const newSelect = select.cloneNode(true);
   select.parentNode.replaceChild(newSelect, select);
+
+  // Explicitly set the value after cloning - cloneNode doesn't reliably preserve
+  // the selected state set via JavaScript property assignment
+  const selectedMode = data.stem_modes.find(m => m.is_selected);
+  if (selectedMode) {
+    newSelect.value = selectedMode.id;
+  }
 
   newSelect.addEventListener("change", async () => {
     const stemMode = newSelect.value;

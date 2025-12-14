@@ -15,10 +15,11 @@ import wave
 from pathlib import Path
 from typing import List
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 
 from lib.constants import DEMUCS_MODELS, DEFAULT_DEMUCS_MODEL, STEM_MODES, DEFAULT_STEM_MODE
 from lib.logging_config import get_logger
+from lib.models import ModelDownloadRequest
 from lib.state import app_state
 
 router = APIRouter()
@@ -179,15 +180,12 @@ def _download_model_sync(model_name: str, python_exe: str, env: dict) -> dict:
 
 
 @router.post("/models/download")
-async def api_download_model(req: Request):
+async def api_download_model(req: ModelDownloadRequest):
     """Trigger download of a Demucs model by running a dummy separation."""
-    data = await req.json()
-    model_name = data.get("model")
-
-    if not model_name or model_name not in DEMUCS_MODELS:
-        raise HTTPException(400, f"Invalid model: {model_name}")
+    model_name = req.model
 
     if _is_model_downloaded(model_name):
+        logger.info(f"Model {model_name} already downloaded")
         return {"success": True, "message": f"Model {model_name} already downloaded"}
 
     python_exe = sys.executable
@@ -199,6 +197,10 @@ async def api_download_model(req: Request):
 
     # Run in thread pool to avoid blocking the event loop
     result = await asyncio.to_thread(_download_model_sync, model_name, python_exe, env)
+    if result.get("success"):
+        logger.info(f"Model {model_name} downloaded successfully")
+    else:
+        logger.error(f"Failed to download model {model_name}: {result.get('message')}")
     return result
 
 

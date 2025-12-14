@@ -9,12 +9,13 @@ from typing import Optional
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
 
 from lib.constants import PLAYLIST_HARD_CAP
+from lib.logging_config import get_logger
 from lib.state import app_state
 
 router = APIRouter()
+logger = get_logger("routes.search")
 
 # Load ytdl helpers
 import importlib.util
@@ -111,9 +112,10 @@ def api_playlist(url: str, max: Optional[int] = None, requestId: Optional[str] =
         return {"items": items}
 
     except Exception as e:
+        logger.exception("Error fetching playlist")
         if requestId:
             app_state.finish_progress(requestId, error=str(e))
-        return JSONResponse({"error": str(e)}, status_code=400)
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/channel")
@@ -171,6 +173,7 @@ def api_channel(channelUrl: Optional[str] = None, channelId: Optional[str] = Non
         return {"items": items}
 
     except Exception as e:
+        logger.exception("Error fetching channel")
         if requestId:
             app_state.finish_progress(requestId, error=str(e))
-        return JSONResponse({"error": str(e)}, status_code=400)
+        raise HTTPException(status_code=400, detail=str(e))

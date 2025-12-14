@@ -4,6 +4,14 @@
 
 import { $, api } from './api.js';
 import { renderQueue } from './queue.js';
+import {
+  DOWNLOAD_PROGRESS_WEIGHT,
+  PROCESSING_PROGRESS_WEIGHT,
+  FAST_POLL_INTERVAL,
+  MEDIUM_POLL_INTERVAL,
+  SLOW_POLL_INTERVAL,
+  EMPTY_STREAK_THRESHOLD,
+} from './constants.js';
 
 // Track last known progress to prevent regression
 window.__lastGlobalProgress = 0;
@@ -18,7 +26,7 @@ export async function refreshProgress() {
     // Pull both progress and queue to compute adjusted counts without backend changes
     const [p, q] = await Promise.all([api("/api/progress"), api("/api/queue")]);
 
-    // Calculate global progress based on individual item progress using same 30/70 split
+    // Calculate global progress based on individual item progress using download/processing weights
     const items = (q && q.items) || [];
     let totalProgress = 0;
 
@@ -29,19 +37,19 @@ export async function refreshProgress() {
         if (it.status === "done") {
           itemProgress = 1.0;
         } else if (it.processing) {
-          // Processing: 30% complete + 70% * splitting progress
+          // Processing: download complete + processing progress
           const splitProgress = it.progress || 0;
-          itemProgress = 0.3 + splitProgress * 0.7;
+          itemProgress = DOWNLOAD_PROGRESS_WEIGHT + splitProgress * PROCESSING_PROGRESS_WEIGHT;
         } else if (it.downloaded) {
-          // Downloaded but not processing: 30%
-          itemProgress = 0.3;
+          // Downloaded but not processing: download weight complete
+          itemProgress = DOWNLOAD_PROGRESS_WEIGHT;
         } else if (it.status === "running") {
-          // Download phase: scale download_progress to first 30%
+          // Download phase: scale download_progress to download weight
           const dlFrac =
             typeof it.download_progress === "number"
               ? it.download_progress
               : it.progress || 0;
-          itemProgress = (dlFrac || 0) * 0.3;
+          itemProgress = (dlFrac || 0) * DOWNLOAD_PROGRESS_WEIGHT;
         }
         // queued, error states remain at 0
 
@@ -67,6 +75,12 @@ export async function refreshProgress() {
     $("#global-progress-bar").style.width = `${pct}%`;
     $("#global-progress-text").textContent = `${pct}%`;
 
+    // Update ARIA attributes on progress bar container
+    const progressContainer = document.querySelector(".progress[role='progressbar']");
+    if (progressContainer) {
+      progressContainer.setAttribute("aria-valuenow", String(pct));
+    }
+
     // Update browser tab title with x/n where x=completed, n=queue length
     try {
       const total = items.length;
@@ -86,7 +100,9 @@ export async function refreshProgress() {
           progress: totalProgress,
         });
       }
-    } catch {}
+    } catch (e) {
+      console.warn("Failed to update browser title/taskbar:", e);
+    }
 
     // Reflect concurrency active/max in UI if elements exist
     if (p.concurrency) {
@@ -131,7 +147,7 @@ export async function refreshProgress() {
       c.running || 0
     } • done ${c.done || 0} • error ${adjustedError}`;
   } catch (e) {
-    // Ignore transient errors
+    console.warn("Transient error refreshing progress:", e);
   }
 }
 
@@ -143,7 +159,7 @@ export async function refreshQueue() {
     const q = await api("/api/queue");
     renderQueue(q);
   } catch (e) {
-    // ignore
+    console.warn("Failed to refresh queue:", e);
   }
 }
 
@@ -165,7 +181,9 @@ export async function refreshConfig() {
           savedPath || cachedCfg.output_dir || "";
       }
     }
-  } catch {}
+  } catch (e) {
+    console.warn("Failed to load cached config:", e);
+  }
   // Load from server (silent; no status UI)
   try {
     const cfg = await api("/api/config");
@@ -191,7 +209,7 @@ export async function refreshConfig() {
       })
     );
   } catch (e) {
-    // Silent failure; no status UI
+    console.warn("Failed to load config from server:", e);
   }
 }
 
@@ -201,14 +219,14 @@ export async function refreshConfig() {
  * - When activity resumes (queue non-empty or active>0), restore fast polling.
  */
 export function setupAdaptivePolling() {
-  let backoffStage = 0; // 0: 1.5s, 1: 5s, 2+: 10s
+  let backoffStage = 0; // 0: fast, 1: medium, 2+: slow
   let emptyStreak = 0;
   let pollTimer = null;
 
   const computeInterval = () => {
-    if (backoffStage <= 0) return 1500;
-    if (backoffStage === 1) return 5000;
-    return 10000;
+    if (backoffStage <= 0) return FAST_POLL_INTERVAL;
+    if (backoffStage === 1) return MEDIUM_POLL_INTERVAL;
+    return SLOW_POLL_INTERVAL;
   };
 
   const stopTimer = () => {
@@ -256,11 +274,11 @@ export function setupAdaptivePolling() {
 
       if (queueEmpty && !activeNow) {
         emptyStreak += 1;
-        if (emptyStreak >= 3) {
+        if (emptyStreak >= EMPTY_STREAK_THRESHOLD) {
           // escalate backoff up to max stage
           if (backoffStage < 2) backoffStage += 1;
           // keep streak capped to avoid overflow
-          emptyStreak = 3;
+          emptyStreak = EMPTY_STREAK_THRESHOLD;
         }
       } else {
         // activity resumed
@@ -271,8 +289,8 @@ export function setupAdaptivePolling() {
           emptyStreak = 0;
         }
       }
-    } catch {
-      // ignore transient errors; next tick will retry
+    } catch (e) {
+      console.warn("Transient polling error (will retry):", e);
     } finally {
       scheduleNext();
     }
@@ -281,11 +299,29 @@ export function setupAdaptivePolling() {
   // kick off
   scheduleNext();
 
-  // progress polling remains at fast cadence but inexpensive; keep at 1.5s
+  // progress polling remains at fast cadence but inexpensive
   let progressTimer = null;
   const startProgressLoop = () => {
     if (progressTimer) return;
-    progressTimer = setInterval(refreshProgress, 1500);
+    progressTimer = setInterval(refreshProgress, FAST_POLL_INTERVAL);
+  };
+  const stopProgressLoop = () => {
+    if (progressTimer) {
+      clearInterval(progressTimer);
+      progressTimer = null;
+    }
   };
   startProgressLoop();
+
+  // Pause polling when tab is hidden to reduce CPU/network usage
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stopTimer();
+      stopProgressLoop();
+    } else {
+      // Resume polling when tab becomes visible again
+      scheduleNext();
+      startProgressLoop();
+    }
+  });
 }

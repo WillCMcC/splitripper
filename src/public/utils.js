@@ -48,9 +48,26 @@ export function getServerQueueUrlSet() {
     return window.__serverQueueUrls instanceof Set
       ? window.__serverQueueUrls
       : new Set();
-  } catch {
+  } catch (e) {
+    console.warn("Error getting server queue URLs:", e);
     return new Set();
   }
+}
+
+/**
+ * Display an error message to the user.
+ * @param {string} message - The error message
+ * @param {string} [targetSelector] - Optional CSS selector for where to show error
+ */
+export function showError(message, targetSelector = "#queue-counts") {
+  const target = document.querySelector(targetSelector);
+  if (target) {
+    target.textContent = `Error: ${message}`;
+    target.classList.add("error");
+    // Remove error class after 5 seconds
+    setTimeout(() => target.classList.remove("error"), 5000);
+  }
+  console.error(message);
 }
 
 /**

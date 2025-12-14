@@ -9,13 +9,84 @@ import threading
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 
-from lib.constants import STEM_MODES
+from lib.constants import STEM_MODES, AUDIO_EXTENSIONS
+from lib.logging_config import get_logger
 from lib.metadata import get_title_from_path
+from lib.models import AddQueueRequest, AddQueueLocalRequest, ConcurrencyRequest
 from lib.state import app_state, QueueItem
 
 router = APIRouter()
+logger = get_logger("routes.queue")
+
+
+def validate_local_file_path(file_path: str) -> tuple[bool, str]:
+    """
+    Validate that a file path is safe to process.
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    # Check for path traversal attempts
+    if ".." in file_path:
+        return False, "Path traversal not allowed"
+
+    # Resolve to absolute path
+    try:
+        resolved = Path(file_path).resolve()
+    except (ValueError, OSError):
+        return False, "Invalid path"
+
+    # Check file exists and is a regular file (not directory, symlink to bad places, etc.)
+    if not resolved.exists():
+        return False, "File does not exist"
+
+    if not resolved.is_file():
+        return False, "Path is not a regular file"
+
+    # Check extension is a valid audio extension
+    ext = resolved.suffix.lower().lstrip(".")
+    if ext not in AUDIO_EXTENSIONS:
+        return False, f"Invalid audio extension: {ext}"
+
+    # Check path is within reasonable locations (user's home or common media directories)
+    home_dir = Path.home()
+    allowed_roots = [
+        home_dir,  # User's home directory
+        Path("/tmp"),  # Temporary files
+        Path("/var/folders"),  # macOS temp folders
+    ]
+
+    # On macOS, also allow /Volumes for external drives
+    if os.path.exists("/Volumes"):
+        allowed_roots.append(Path("/Volumes"))
+
+    # Check if path is under an allowed root
+    path_allowed = False
+    for allowed_root in allowed_roots:
+        try:
+            resolved.relative_to(allowed_root)
+            path_allowed = True
+            break
+        except ValueError:
+            continue
+
+    if not path_allowed:
+        return False, "File path not in allowed directory"
+
+    # Block sensitive directories even within home
+    sensitive_dirs = [
+        ".ssh", ".gnupg", ".config", ".aws", ".azure", ".kube",
+        "Library/Keychains", "Library/Cookies", ".password-store"
+    ]
+
+    path_str = str(resolved)
+    for sensitive in sensitive_dirs:
+        if f"/{sensitive}/" in path_str or path_str.endswith(f"/{sensitive}"):
+            return False, "Access to sensitive directory not allowed"
+
+    return True, ""
 
 # Reference to worker function - will be set by server.py to avoid circular imports
 _download_worker_func = None
@@ -34,19 +105,11 @@ def api_get_queue():
 
 
 @router.post("/queue")
-async def api_add_queue(req: Request):
+def api_add_queue(req: AddQueueRequest):
     """Add YouTube URLs to the queue."""
-    data = await req.json()
-    urls = data.get("urls") or []
-    folder = data.get("folder")
-    stem_mode = data.get("stem_mode")  # Optional per-job stem mode
-
-    if not isinstance(urls, list) or not urls:
-        raise HTTPException(400, "urls must be a non-empty array")
-
-    # Validate stem_mode if provided
-    if stem_mode and stem_mode not in STEM_MODES:
-        stem_mode = None
+    urls = req.urls
+    folder = req.folder
+    stem_mode = req.stem_mode
 
     added = []
     default_folder = app_state.get_config_value("default_folder", "")
@@ -61,29 +124,27 @@ async def api_add_queue(req: Request):
         app_state.add_to_queue(item)
         added.append(item.to_dict())
 
+    logger.info(f"Added {len(added)} items to queue")
     return {"added": added}
 
 
 @router.post("/queue-local")
-async def api_add_queue_local(req: Request):
+def api_add_queue_local(req: AddQueueLocalRequest):
     """Add local audio files to the queue."""
-    data = await req.json()
-    files = data.get("files") or []
-    folder = data.get("folder")
-    stem_mode = data.get("stem_mode")  # Optional per-job stem mode
-
-    if not isinstance(files, list) or not files:
-        raise HTTPException(400, "files must be a non-empty array")
-
-    # Validate stem_mode if provided
-    if stem_mode and stem_mode not in STEM_MODES:
-        stem_mode = None
+    files = req.files
+    folder = req.folder
+    stem_mode = req.stem_mode
 
     added = []
+    rejected = []
     default_folder = app_state.get_config_value("default_folder", "")
 
     for file_path in files:
-        if not os.path.exists(file_path):
+        # Validate the file path for security
+        is_valid, error_msg = validate_local_file_path(file_path)
+        if not is_valid:
+            logger.warning(f"Rejected local file: {file_path} - {error_msg}")
+            rejected.append({"path": file_path, "error": error_msg})
             continue
 
         item = QueueItem(
@@ -98,24 +159,28 @@ async def api_add_queue_local(req: Request):
         app_state.add_to_queue(item)
         added.append(item.to_dict())
 
-    return {"added": added}
+    logger.info(f"Added {len(added)} local files to queue, rejected {len(rejected)}")
+    return {"added": added, "rejected": rejected}
 
 
 @router.post("/start")
 def api_start():
     """Start queue processing."""
-    if app_state.running:
-        return {"started": False, "message": "Already running"}
+    # Hold lock for entire operation to prevent race condition
+    # where two simultaneous requests could both start workers
+    with app_state.lock:
+        if app_state._running:
+            return {"started": False, "message": "Already running"}
 
-    if _download_worker_func is None:
-        raise HTTPException(500, "Worker function not initialized")
+        if _download_worker_func is None:
+            raise HTTPException(500, "Worker function not initialized")
 
-    t = threading.Thread(target=_download_worker_func, daemon=True)
-    app_state.worker_thread = t
-    app_state.running = True
-    app_state.active = 0
-    t.start()
-    return {"started": True}
+        t = threading.Thread(target=_download_worker_func, daemon=True)
+        app_state._worker_thread = t
+        app_state._running = True
+        app_state._active = 0
+        t.start()
+        return {"started": True}
 
 
 @router.post("/stop")
@@ -185,7 +250,7 @@ def api_get_concurrency():
 
 
 @router.post("/concurrency")
-async def api_set_concurrency(req: Request):
+def api_set_concurrency(req: ConcurrencyRequest):
     """Set concurrency limit."""
     from lib.config import Config
 
@@ -193,18 +258,10 @@ async def api_set_concurrency(req: Request):
     CONFIG_PATH = BASE_DIR / "config.json"
     config = Config(CONFIG_PATH)
 
-    data = await req.json()
-    if "max" not in data:
-        raise HTTPException(400, "Body must contain 'max'")
-
-    try:
-        new_max = int(data["max"])
-    except Exception:
-        raise HTTPException(400, "'max' must be an integer")
-
-    new_max = max(1, min(64, new_max))
+    new_max = req.max
     app_state.max_concurrency = new_max
     app_state.update_config({"max_concurrency": new_max})
     config.update({"max_concurrency": new_max})
 
+    logger.info(f"Concurrency set to {new_max}")
     return {"active": app_state.active, "max": new_max, "serverMax": 64}

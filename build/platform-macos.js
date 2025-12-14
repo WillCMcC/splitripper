@@ -188,6 +188,54 @@ function buildMacOS(bundleDir, projectRoot) {
       console.warn("Audio stack install encountered an issue:", e.message);
     }
 
+    // =========================================================================
+    // Bundle Size Optimization - Remove unnecessary files (~450MB savings)
+    // =========================================================================
+    const sitePackages = path.join(pbsRoot, "python/lib/python3.12/site-packages");
+
+    // 1. Remove packages not needed at runtime (~200MB savings)
+    console.log("Removing unnecessary packages...");
+    const packagesToRemove = [
+      "scikit-learn", "numba", "llvmlite", "Cython",
+      "pip", "setuptools", "wheel"
+    ];
+    try {
+      execSync(
+        `"${pbsPython}" -m pip uninstall -y ${packagesToRemove.join(" ")} 2>/dev/null || true`,
+        { stdio: "inherit" }
+      );
+    } catch (e) {
+      console.warn("Some packages may not have been installed:", e.message);
+    }
+
+    // 2. Remove test directories (~60MB savings)
+    console.log("Removing test directories...");
+    execSync(`find "${sitePackages}" -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true`, { stdio: "inherit" });
+    execSync(`find "${sitePackages}" -type d -name "test" -exec rm -rf {} + 2>/dev/null || true`, { stdio: "inherit" });
+
+    // 3. Remove __pycache__ directories (~10-20MB savings)
+    console.log("Removing __pycache__ directories...");
+    execSync(`find "${sitePackages}" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true`, { stdio: "inherit" });
+    execSync(`find "${sitePackages}" -name "*.pyc" -delete 2>/dev/null || true`, { stdio: "inherit" });
+
+    // 4. Remove torch development headers (~59MB savings)
+    console.log("Removing torch development headers...");
+    const torchInclude = path.join(sitePackages, "torch", "include");
+    if (fs.existsSync(torchInclude)) {
+      fs.rmSync(torchInclude, { recursive: true, force: true });
+    }
+    const torchShare = path.join(sitePackages, "torch", "share");
+    if (fs.existsSync(torchShare)) {
+      fs.rmSync(torchShare, { recursive: true, force: true });
+    }
+
+    // 5. Remove .dist-info metadata (~5MB savings)
+    console.log("Removing dist-info metadata...");
+    execSync(`find "${sitePackages}" -type d -name "*.dist-info" -exec rm -rf {} + 2>/dev/null || true`, { stdio: "inherit" });
+
+    console.log("Bundle size optimization complete!");
+    // =========================================================================
+
     // Pre-download the default htdemucs model
     preDownloadModel(bundleDir, pbsPython);
 

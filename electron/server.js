@@ -18,6 +18,12 @@ let serverPort = 9000;
 let serverURL = null;
 let serverLogStream = null;
 
+// Crash recovery state
+let crashCount = 0;
+let lastCrashTime = 0;
+const MAX_CRASHES = 3;
+const CRASH_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
 // Root directory (parent of electron/)
 const rootDir = path.join(__dirname, "..");
 
@@ -238,12 +244,56 @@ async function startServer() {
 
   serverProcess.on("close", (code) => {
     console.log(`Server process exited with code ${code}`);
+
     try {
       if (serverLogStream) {
         serverLogStream.end();
         serverLogStream = null;
       }
     } catch {}
+
+    // Check if this was an unexpected exit (crash)
+    if (code !== 0 && !stoppingServer) {
+      const now = Date.now();
+
+      // Reset crash count if outside window
+      if (now - lastCrashTime > CRASH_WINDOW_MS) {
+        crashCount = 0;
+      }
+
+      crashCount++;
+      lastCrashTime = now;
+
+      console.error(`Server crashed (exit code ${code}). Crash count: ${crashCount}/${MAX_CRASHES}`);
+
+      if (crashCount < MAX_CRASHES) {
+        console.log("Attempting to restart server...");
+        serverProcess = null;
+        serverPort = null;
+
+        // Restart after brief delay
+        setTimeout(async () => {
+          try {
+            await startServer();
+            console.log("Server restarted successfully");
+
+            // Notify renderer if window exists
+            const { getMainWindow } = require("./window");
+            const mainWindow = getMainWindow();
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.loadURL(getServerURL());
+            }
+          } catch (err) {
+            console.error("Failed to restart server:", err);
+          }
+        }, 1000);
+      } else {
+        console.error("Max crash limit reached. Server will not restart.");
+        // Could show error dialog here
+      }
+    }
+
+    serverProcess = null;
   });
 }
 
@@ -290,69 +340,63 @@ function requestShutdown(timeoutMs = 400) {
  * @returns {Promise<void>}
  */
 async function stopServer() {
-  if (!serverProcess || stoppingServer) {
-    console.log(
-      !serverProcess
-        ? "No server process to stop"
-        : "Server stop already in progress"
-    );
+  if (!serverProcess) {
+    console.log("No server process to stop");
+    return;
+  }
+
+  if (stoppingServer) {
+    console.log("Already stopping server");
     return;
   }
 
   stoppingServer = true;
-  console.log(`Stopping FastAPI server... PID: ${serverProcess.pid}`);
+  const pid = serverProcess.pid;
+  console.log(`Stopping server (PID: ${pid})...`);
 
-  // Try graceful shutdown via HTTP first
-  await requestShutdown(500);
+  try {
+    // Try graceful shutdown first
+    await requestShutdown().catch(() => {});
 
-  // Wait briefly for a clean exit, then kill if needed
-  return new Promise((resolve) => {
-    const graceTimer = setTimeout(() => {
-      // Use tree-kill to kill the entire process tree (shell + python process)
-      kill(serverProcess.pid, "SIGTERM", (err) => {
-        if (err) {
-          console.log("Error with SIGTERM, trying SIGKILL:", err);
-          kill(serverProcess.pid, "SIGKILL", (killErr) => {
-            if (killErr) {
-              console.log("Error with SIGKILL:", killErr);
-              // Final fallback - try system pkill
-              try {
-                execSync('pkill -f "server.py"', { stdio: "ignore" });
-                console.log("Fallback: used system pkill");
-              } catch (e) {
-                console.log("All kill attempts failed");
-              }
-            } else {
-              console.log("Server process tree killed with SIGKILL");
-            }
-            serverProcess = null;
-            stoppingServer = false;
-            resolve();
-          });
-        } else {
-          console.log("Server process tree killed with SIGTERM");
-          serverProcess = null;
-          stoppingServer = false;
-          resolve();
-        }
-      });
-    }, 200);
-
-    // If the process exits cleanly during grace period, resolve early
-    try {
-      serverProcess.once("close", () => {
-        try {
-          clearTimeout(graceTimer);
-        } catch {}
-        console.log("Server process exited during graceful period");
-        serverProcess = null;
-        stoppingServer = false;
+    // Give it a moment to shut down gracefully
+    await new Promise((resolve) => {
+      const timeout = setTimeout(() => {
         resolve();
+      }, 500);
+
+      if (serverProcess) {
+        serverProcess.once("close", () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+      } else {
+        clearTimeout(timeout);
+        resolve();
+      }
+    });
+
+    // If still running, force kill
+    if (serverProcess && !serverProcess.killed) {
+      console.log("Graceful shutdown failed, force killing...");
+
+      await new Promise((resolve) => {
+        kill(pid, "SIGTERM", (err) => {
+          if (err) {
+            console.warn("SIGTERM failed, trying SIGKILL:", err.message);
+            kill(pid, "SIGKILL", () => resolve());
+          } else {
+            resolve();
+          }
+        });
       });
-    } catch {
-      // If attaching fails, continue with kill path
     }
-  });
+  } catch (err) {
+    console.error("Error stopping server:", err);
+  } finally {
+    serverProcess = null;
+    serverPort = null;
+    stoppingServer = false;
+  }
 }
 
 // Getters for shared state
@@ -368,6 +412,14 @@ function getServerProcess() {
   return serverProcess;
 }
 
+/**
+ * Reset the crash count (useful for manual restart)
+ */
+function resetCrashCount() {
+  crashCount = 0;
+  lastCrashTime = 0;
+}
+
 module.exports = {
   getFreePort,
   startServer,
@@ -376,4 +428,5 @@ module.exports = {
   getServerPort,
   getServerURL,
   getServerProcess,
+  resetCrashCount,
 };

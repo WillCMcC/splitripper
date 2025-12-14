@@ -18,6 +18,8 @@ Architecture:
 import os
 import shutil
 import subprocess
+import threading
+import time
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -108,6 +110,26 @@ init_updater(BASE_DIR)
 
 # Set the download worker function for the queue router
 set_download_worker(download_worker)
+
+
+# =============================================================================
+# Progress Map Cleanup Thread
+# =============================================================================
+
+def _progress_cleanup_loop():
+    """Background thread to clean up old progress entries and prevent memory leaks."""
+    while True:
+        time.sleep(60)  # Run every minute
+        try:
+            removed = app_state.cleanup_old_progress()
+            if removed > 0:
+                logger.debug(f"Cleaned up {removed} old progress entries")
+        except Exception as e:
+            logger.debug(f"Progress cleanup error: {e}")
+
+# Start cleanup thread (daemon so it exits with main process)
+_cleanup_thread = threading.Thread(target=_progress_cleanup_loop, daemon=True)
+_cleanup_thread.start()
 
 
 # =============================================================================

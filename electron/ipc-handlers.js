@@ -9,6 +9,7 @@ const path = require("path");
 const os = require("os");
 const { getMainWindow } = require("./window");
 const { getTray } = require("./tray");
+const { getServerProcess, getServerURL, getServerPort } = require("./server");
 
 /**
  * Register all IPC handlers
@@ -140,6 +141,15 @@ function registerIpcHandlers() {
     return { files: foundFiles, debug };
   });
 
+  // Handle server status request
+  ipcMain.handle("get-server-status", () => {
+    return {
+      running: !!getServerProcess(),
+      url: getServerURL(),
+      port: getServerPort(),
+    };
+  });
+
   // Handle taskbar progress updates
   ipcMain.on("update-taskbar-progress", (event, data) => {
     const { completed, total, progress, etaSeconds } = data;
@@ -158,11 +168,6 @@ function registerIpcHandlers() {
     };
 
     const etaStr = formatEta(etaSeconds);
-    console.log(
-      `Taskbar progress update: ${completed}/${total} (${(
-        (progress || 0) * 100
-      ).toFixed(1)}%)` + (etaStr ? ` ~${etaStr} remaining` : "")
-    );
 
     // Update system tray tooltip with both completion, progress, and ETA (if available)
     if (tray) {
@@ -178,17 +183,10 @@ function registerIpcHandlers() {
     if (mainWindow) {
       if (total === 0) {
         // No items in queue, remove progress bar
-        console.log("Removing progress bar (no items)");
         mainWindow.setProgressBar(-1);
       } else {
         // Use the global progress percentage for smooth dock/taskbar progress
-        const globalProgress = progress || 0;
-        console.log(
-          `Setting progress bar to: ${globalProgress} (${(
-            globalProgress * 100
-          ).toFixed(1)}%)`
-        );
-        mainWindow.setProgressBar(globalProgress);
+        mainWindow.setProgressBar(progress || 0);
       }
     }
   });

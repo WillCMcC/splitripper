@@ -4,6 +4,7 @@
 
 import { api, getCurrentFolder } from './api.js';
 import { injectOptimisticQueue } from './queue.js';
+import { showError } from './utils.js';
 
 // Forward declarations
 let _refreshQueue = null;
@@ -25,13 +26,17 @@ export function setupStartHandler() {
   if (!btnStart) return;
 
   btnStart.addEventListener("click", async () => {
+    btnStart.disabled = true;
+    btnStart.textContent = "Starting...";
     try {
       await api("/api/start", { method: "POST" });
       if (_refreshQueue) await _refreshQueue();
     } catch (e) {
       console.error("Failed to start:", e);
-      const counts = document.querySelector("#queue-counts");
-      if (counts) counts.textContent = "Failed to start: " + e.message;
+      showError("Failed to start: " + e.message);
+    } finally {
+      btnStart.disabled = false;
+      btnStart.textContent = "Start";
     }
   });
 }
@@ -48,6 +53,8 @@ export function setupRetryAllHandler() {
     if (btn.dataset.busy === "1") return;
     btn.dataset.busy = "1";
     btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = "Retrying...";
 
     try {
       // Snapshot current queue from server
@@ -56,6 +63,7 @@ export function setupRetryAllHandler() {
       if (failed.length === 0) {
         btn.disabled = false;
         btn.dataset.busy = "0";
+        btn.textContent = originalText;
         return;
       }
 
@@ -85,12 +93,12 @@ export function setupRetryAllHandler() {
       if (_refreshQueue) await _refreshQueue();
     } catch (e) {
       console.error("Failed to retry all:", e);
-      const counts = document.querySelector("#queue-counts");
-      if (counts) counts.textContent = "Failed to retry all: " + e.message;
+      showError("Failed to retry all: " + e.message);
       if (_refreshQueue) await _refreshQueue();
     } finally {
       btn.disabled = false;
       btn.dataset.busy = "0";
+      btn.textContent = originalText;
     }
   });
 }
@@ -103,14 +111,18 @@ export function setupStopHandler() {
   if (!btnStop) return;
 
   btnStop.addEventListener("click", async () => {
+    btnStop.disabled = true;
+    btnStop.textContent = "Stopping...";
     try {
       await api("/api/stop", { method: "POST" });
       if (_refreshQueue) await _refreshQueue();
       if (_refreshProgress) await _refreshProgress();
     } catch (e) {
       console.error("Failed to stop:", e);
-      const counts = document.querySelector("#queue-counts");
-      if (counts) counts.textContent = "Failed to stop: " + e.message;
+      showError("Failed to stop: " + e.message);
+    } finally {
+      btnStop.disabled = false;
+      btnStop.textContent = "Stop";
     }
   });
 }
@@ -123,14 +135,18 @@ export function setupClearHandler() {
   if (!btnClear) return;
 
   btnClear.addEventListener("click", async () => {
+    btnClear.disabled = true;
+    btnClear.textContent = "Clearing...";
     try {
       await api("/api/clear", { method: "POST" });
       if (_refreshQueue) await _refreshQueue();
       if (_refreshProgress) await _refreshProgress();
     } catch (e) {
       console.error("Failed to clear:", e);
-      const counts = document.querySelector("#queue-counts");
-      if (counts) counts.textContent = "Failed to clear: " + e.message;
+      showError("Failed to clear: " + e.message);
+    } finally {
+      btnClear.disabled = false;
+      btnClear.textContent = "Clear";
     }
   });
 }

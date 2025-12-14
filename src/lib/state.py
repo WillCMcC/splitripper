@@ -237,24 +237,29 @@ class AppState:
     # Progress tracking for long operations
     def set_progress(self, request_id: str, phase: str, current: int = 0,
                      total: int = 0, message: str = "") -> None:
+        import time
         with self._progress_lock:
             self._progress_map[request_id] = {
                 "phase": phase,
                 "current": current,
                 "total": total,
                 "message": message,
+                "_timestamp": time.time(),
             }
 
     def update_progress(self, request_id: str, **kwargs) -> None:
+        import time
         with self._progress_lock:
             if request_id in self._progress_map:
                 self._progress_map[request_id].update(kwargs)
+                self._progress_map[request_id]["_timestamp"] = time.time()
             else:
                 self._progress_map[request_id] = {
                     "phase": kwargs.get("phase", "idle"),
                     "current": kwargs.get("current", 0),
                     "total": kwargs.get("total", 0),
                     "message": kwargs.get("message", ""),
+                    "_timestamp": time.time(),
                 }
 
     def get_progress(self, request_id: str) -> Dict[str, Any]:
@@ -267,21 +272,43 @@ class AppState:
             })
 
     def finish_progress(self, request_id: str, error: Optional[str] = None) -> None:
+        import time
         with self._progress_lock:
             if error:
                 self._progress_map[request_id] = {
                     "phase": "error",
                     "current": 0,
                     "total": 0,
-                    "message": error
+                    "message": error,
+                    "_timestamp": time.time(),
                 }
             else:
                 self._progress_map[request_id] = {
                     "phase": "done",
                     "current": 1,
                     "total": 1,
-                    "message": "Done"
+                    "message": "Done",
+                    "_timestamp": time.time(),
                 }
+
+    def cleanup_old_progress(self, max_age_seconds: float = 300) -> int:
+        """Remove progress entries older than max_age_seconds. Returns count removed."""
+        import time
+        now = time.time()
+        removed = 0
+        with self._progress_lock:
+            to_remove = []
+            for request_id, progress in self._progress_map.items():
+                # Check if entry has a timestamp and is old
+                if progress.get("_timestamp", now) < now - max_age_seconds:
+                    to_remove.append(request_id)
+                # Also remove completed entries after shorter time
+                elif progress.get("phase") == "done" and progress.get("_timestamp", now) < now - 60:
+                    to_remove.append(request_id)
+            for request_id in to_remove:
+                del self._progress_map[request_id]
+                removed += 1
+        return removed
 
     # Active processes tracking
     def register_process(self, item_id: str, proc: Any) -> None:
