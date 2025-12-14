@@ -35,6 +35,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "electron/**/*",
       "src/**/*",
       "node_modules/**/*",
       "package.json",
