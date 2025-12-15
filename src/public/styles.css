@@ -2306,3 +2306,404 @@ h3 {
   border-color: rgba(96, 165, 250, 0.5);
   color: #60a5fa;
 }
+
+/* =============================================================================
+   Splits Tab - Browse and drag processed stems
+   ============================================================================= */
+
+.splits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  padding-right: 6px;
+  padding-top: 4px;
+}
+
+.splits-empty {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.splits-empty p {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Artist group */
+.splits-artist-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.splits-artist-header {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+/* Individual track */
+.splits-track {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 12px 14px;
+  background: linear-gradient(
+    180deg,
+    rgba(14, 20, 28, 0.95),
+    rgba(12, 18, 25, 0.95)
+  );
+  border: 1px solid rgba(28, 31, 38, 0.8);
+  border-radius: 10px;
+  transition: border-color 180ms ease,
+    box-shadow 200ms ease;
+  box-shadow: 0 3px 12px rgba(2, 6, 23, 0.45);
+}
+
+.splits-track:hover {
+  border-color: rgba(124, 143, 170, 0.45);
+  box-shadow: 0 10px 22px rgba(2, 6, 23, 0.55),
+    0 0 0 1px rgba(124, 143, 170, 0.1) inset;
+}
+
+.splits-track-main {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.splits-track-info {
+  min-width: 0;
+}
+
+.splits-track-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #d9e2ec;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+/* Stems container */
+.splits-track-stems {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Player UI - appears below track when playing */
+.splits-player {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(124, 143, 170, 0.15);
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.splits-player.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.player-play-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(96, 165, 250, 0.2);
+  color: #60a5fa;
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+}
+
+.player-play-btn:hover {
+  background: rgba(96, 165, 250, 0.3);
+  transform: scale(1.05);
+}
+
+.player-play-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.player-stem-name {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--muted);
+  flex: 1;
+}
+
+.player-times {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.player-time {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.player-time-sep {
+  font-size: 11px;
+  color: rgba(124, 143, 170, 0.4);
+}
+
+/* Waveform container */
+.player-waveform-container {
+  position: relative;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: rgba(10, 12, 16, 0.5);
+}
+
+.player-waveform {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Progress overlay - colors the played portion */
+.player-waveform-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg,
+    rgba(96, 165, 250, 0.3) 0%,
+    rgba(129, 140, 248, 0.3) 100%
+  );
+  pointer-events: none;
+  transition: width 50ms linear;
+}
+
+/* Playhead cursor */
+.player-waveform-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0%;
+  width: 2px;
+  background: #60a5fa;
+  box-shadow: 0 0 8px rgba(96, 165, 250, 0.6);
+  pointer-events: none;
+  transition: left 50ms linear;
+}
+
+.player-waveform-container:hover .player-waveform-cursor {
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.8);
+}
+
+.player-waveform-container.scrubbing .player-waveform-cursor {
+  width: 3px;
+  box-shadow: 0 0 16px rgba(96, 165, 250, 1);
+}
+
+/* Hover effect on waveform */
+.player-waveform-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(96, 165, 250, 0.05) var(--hover-pos, 50%),
+    transparent 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.player-waveform-container:hover::after {
+  opacity: 1;
+}
+
+/* Draggable stem chip */
+.draggable-stem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 150ms ease;
+  background: rgba(124, 143, 170, 0.12);
+  border: 1px solid rgba(124, 143, 170, 0.25);
+  color: var(--accent);
+  position: relative;
+}
+
+/* Drag hint indicator - grip lines */
+.stem-drag-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 6px;
+  height: 10px;
+  opacity: 0.4;
+  cursor: grab;
+  transition: opacity 150ms ease;
+}
+
+.stem-drag-hint::before,
+.stem-drag-hint::after {
+  content: "";
+  display: block;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+.draggable-stem:hover .stem-drag-hint {
+  opacity: 0.7;
+}
+
+.stem-label {
+  pointer-events: none;
+}
+
+/* Active/playing state */
+.draggable-stem.active {
+  background: rgba(96, 165, 250, 0.2);
+  border-color: rgba(96, 165, 250, 0.5);
+  color: #60a5fa;
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.3);
+}
+
+.draggable-stem:hover {
+  background: rgba(96, 165, 250, 0.15);
+  border-color: rgba(96, 165, 250, 0.4);
+  color: #60a5fa;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(96, 165, 250, 0.15);
+}
+
+.draggable-stem:active,
+.draggable-stem.dragging {
+  cursor: grabbing;
+  background: rgba(96, 165, 250, 0.25);
+  border-color: rgba(96, 165, 250, 0.6);
+  transform: scale(0.97);
+  box-shadow: 0 2px 4px rgba(96, 165, 250, 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .draggable-stem:hover,
+  .draggable-stem:active,
+  .draggable-stem.dragging {
+    transform: none;
+  }
+}
+
+/* Color-code common stem types */
+.draggable-stem[data-stem="vocals"] {
+  background: rgba(168, 85, 247, 0.12);
+  border-color: rgba(168, 85, 247, 0.3);
+  color: #a855f7;
+}
+.draggable-stem[data-stem="vocals"]:hover {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.5);
+  box-shadow: 0 3px 8px rgba(168, 85, 247, 0.15);
+}
+
+.draggable-stem[data-stem="instrumental"] {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+.draggable-stem[data-stem="instrumental"]:hover {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.5);
+  box-shadow: 0 3px 8px rgba(34, 197, 94, 0.15);
+}
+
+.draggable-stem[data-stem="drums"] {
+  background: rgba(249, 115, 22, 0.12);
+  border-color: rgba(249, 115, 22, 0.3);
+  color: #f97316;
+}
+.draggable-stem[data-stem="drums"]:hover {
+  background: rgba(249, 115, 22, 0.2);
+  border-color: rgba(249, 115, 22, 0.5);
+  box-shadow: 0 3px 8px rgba(249, 115, 22, 0.15);
+}
+
+.draggable-stem[data-stem="bass"] {
+  background: rgba(236, 72, 153, 0.12);
+  border-color: rgba(236, 72, 153, 0.3);
+  color: #ec4899;
+}
+.draggable-stem[data-stem="bass"]:hover {
+  background: rgba(236, 72, 153, 0.2);
+  border-color: rgba(236, 72, 153, 0.5);
+  box-shadow: 0 3px 8px rgba(236, 72, 153, 0.15);
+}
+
+.draggable-stem[data-stem="piano"] {
+  background: rgba(14, 165, 233, 0.12);
+  border-color: rgba(14, 165, 233, 0.3);
+  color: #0ea5e9;
+}
+.draggable-stem[data-stem="piano"]:hover {
+  background: rgba(14, 165, 233, 0.2);
+  border-color: rgba(14, 165, 233, 0.5);
+  box-shadow: 0 3px 8px rgba(14, 165, 233, 0.15);
+}
+
+.draggable-stem[data-stem="guitar"] {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+}
+.draggable-stem[data-stem="guitar"]:hover {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: rgba(251, 191, 36, 0.5);
+  box-shadow: 0 3px 8px rgba(251, 191, 36, 0.15);
+}
+
+.draggable-stem[data-stem="other"] {
+  background: rgba(156, 163, 175, 0.12);
+  border-color: rgba(156, 163, 175, 0.3);
+  color: #9ca3af;
+}
+.draggable-stem[data-stem="other"]:hover {
+  background: rgba(156, 163, 175, 0.2);
+  border-color: rgba(156, 163, 175, 0.5);
+  box-shadow: 0 3px 8px rgba(156, 163, 175, 0.15);
+}

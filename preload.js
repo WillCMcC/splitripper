@@ -18,5 +18,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   isElectron: true,
 
   // File searching
-  findFile: (name, size) => ipcRenderer.invoke('find-file', name, size)
+  findFile: (name, size) => ipcRenderer.invoke('find-file', name, size),
+
+  // Native file drag-and-drop (for dragging stems to DAW)
+  startDrag: (filePath) => ipcRenderer.send('start-drag', filePath)
 });

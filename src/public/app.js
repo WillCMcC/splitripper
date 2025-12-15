@@ -31,6 +31,9 @@ import { setupSearchHandlers, setRefreshQueue as setSearchRefreshQueue } from '.
 // Queue control handlers
 import { setupQueueControls, setRefreshQueue as setControlsRefreshQueue, setRefreshProgress as setControlsRefreshProgress } from './controls.js';
 
+// Splits browser
+import { setupSplits, refreshSplits } from './splits.js';
+
 // Wire up refreshQueue/refreshProgress to modules that need it
 setQueueRefreshQueue(refreshQueue);
 setResultsRefreshQueue(refreshQueue);
@@ -219,5 +222,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupQuickDownload();
   setupDownloadAll();
   loadModelsConfig();
+  setupSplits();
   boot();
 });

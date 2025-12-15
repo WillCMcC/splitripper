@@ -40,6 +40,7 @@ from routes.search import router as search_router
 from routes.queue import router as queue_router, set_download_worker
 from routes.utils import router as utils_router
 from routes.ytdlp import router as ytdlp_router
+from routes.splits import router as splits_router
 
 # Import worker
 from services.worker import download_worker
@@ -173,6 +174,7 @@ app.include_router(search_router, prefix="/api")
 app.include_router(queue_router, prefix="/api")
 app.include_router(utils_router, prefix="/api")
 app.include_router(ytdlp_router, prefix="/api")
+app.include_router(splits_router, prefix="/api")
 
 
 # =============================================================================

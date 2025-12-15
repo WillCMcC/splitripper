@@ -27,6 +27,7 @@
           <button class="tab-button active" data-tab="local-files" role="tab" aria-selected="true" aria-controls="local-files-tab">
             Local Files
           </button>
+          <button class="tab-button" data-tab="splits" role="tab" aria-selected="false" aria-controls="splits-tab">Splits</button>
           <button class="tab-button" data-tab="search" role="tab" aria-selected="false" aria-controls="search-tab">Search</button>
           <button class="tab-button" data-tab="settings" role="tab" aria-selected="false" aria-controls="settings-tab">Settings</button>
         </nav>
@@ -85,6 +86,24 @@
           </div>
 
           <div id="local-files-list" class="list" role="list" aria-label="Local files list"></div>
+        </div>
+
+        <div class="tab-content" id="splits-tab" role="tabpanel" aria-labelledby="splits-tab">
+          <div class="tab-header">
+            <div class="tab-title-section">
+              <h2>Splits</h2>
+              <p class="muted">Drag stems into your DAW</p>
+            </div>
+            <button id="btn-refresh-splits" class="secondary" aria-label="Refresh splits list">
+              Refresh
+            </button>
+          </div>
+
+          <div id="splits-empty" class="splits-empty" style="display: none;">
+            <p class="muted">No splits yet. Process some tracks to see them here.</p>
+          </div>
+
+          <div id="splits-list" class="splits-list" role="list" aria-label="Processed splits"></div>
         </div>
 
         <div class="tab-content" id="settings-tab" role="tabpanel" aria-labelledby="settings-tab">

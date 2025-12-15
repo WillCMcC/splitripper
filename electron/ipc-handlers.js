@@ -3,7 +3,7 @@
  * Handles inter-process communication between renderer and main process
  */
 
-const { dialog, ipcMain } = require("electron");
+const { dialog, ipcMain, nativeImage } = require("electron");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -148,6 +148,39 @@ function registerIpcHandlers() {
       url: getServerURL(),
       port: getServerPort(),
     };
+  });
+
+  // Handle native file drag-and-drop (for dragging stems to DAW)
+  ipcMain.on("start-drag", (event, filePath) => {
+    if (!filePath || typeof filePath !== "string") {
+      console.error("Invalid file path for drag:", filePath);
+      return;
+    }
+
+    // Verify file exists
+    if (!fs.existsSync(filePath)) {
+      console.error("File does not exist for drag:", filePath);
+      return;
+    }
+
+    // Start native drag operation
+    // Create a small icon for the drag operation (required by Electron)
+    const iconPath = path.join(__dirname, "..", "assets", "drag-icon.png");
+    let icon;
+
+    if (fs.existsSync(iconPath)) {
+      icon = nativeImage.createFromPath(iconPath);
+    } else {
+      // Create a small 1x1 pixel icon as fallback (minimum valid image)
+      // This is a 1x1 transparent PNG as base64
+      const tinyPng = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+      icon = nativeImage.createFromBuffer(Buffer.from(tinyPng, "base64"));
+    }
+
+    event.sender.startDrag({
+      file: filePath,
+      icon: icon,
+    });
   });
 
   // Handle taskbar progress updates
