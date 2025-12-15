@@ -1,6 +1,6 @@
 {
   "name": "splitboy",
-  "version": "1.0.7",
+  "version": "1.1.0",
   "description": "An Electron desktop app that downloads audio from YouTube and separates it into stems using Demucs AI. Choose from 7 professional models and extract 2, 4, or 6 stems including vocals, drums, bass, and more.",
   "main": "main.js",
   "scripts": {
