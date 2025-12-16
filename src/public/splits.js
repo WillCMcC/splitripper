@@ -12,6 +12,8 @@ let currentTrackEl = null;
 let animationFrameId = null;
 let audioContext = null;
 let waveformCache = new Map(); // Cache waveforms by file path
+let searchQuery = "";
+let sortMode = "recent"; // "recent" or "alpha"
 
 /**
  * Fetch splits from the API
@@ -28,6 +30,44 @@ async function fetchSplits() {
 }
 
 /**
+ * Filter tracks based on search query
+ */
+function filterTracks(tracks, query) {
+  if (!query || !query.trim()) return tracks;
+
+  const lowerQuery = query.toLowerCase().trim();
+  return tracks.filter(track => {
+    const artist = (track.artist || "").toLowerCase();
+    const title = (track.title || "").toLowerCase();
+    return artist.includes(lowerQuery) || title.includes(lowerQuery);
+  });
+}
+
+/**
+ * Sort tracks based on sort mode
+ */
+function sortTracks(tracks, mode) {
+  const sorted = [...tracks];
+
+  if (mode === "alpha") {
+    // Sort alphabetically by artist, then by title
+    sorted.sort((a, b) => {
+      const artistA = (a.artist || "").toLowerCase();
+      const artistB = (b.artist || "").toLowerCase();
+      if (artistA !== artistB) return artistA.localeCompare(artistB);
+      const titleA = (a.title || "").toLowerCase();
+      const titleB = (b.title || "").toLowerCase();
+      return titleA.localeCompare(titleB);
+    });
+  } else {
+    // "recent" mode: sort by mtime descending (most recent first)
+    sorted.sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
+  }
+
+  return sorted;
+}
+
+/**
  * Render the splits list
  */
 function renderSplits(tracks) {
@@ -36,9 +76,21 @@ function renderSplits(tracks) {
 
   if (!listEl) return;
 
-  if (!tracks || tracks.length === 0) {
+  // Apply filtering and sorting
+  let displayTracks = filterTracks(tracks, searchQuery);
+  displayTracks = sortTracks(displayTracks, sortMode);
+
+  if (!displayTracks || displayTracks.length === 0) {
     listEl.innerHTML = "";
-    if (emptyEl) emptyEl.style.display = "block";
+    if (emptyEl) {
+      // Show different message if filtering resulted in no matches
+      if (tracks && tracks.length > 0 && searchQuery.trim()) {
+        emptyEl.innerHTML = `<p class="muted">No splits match "${escapeHtml(searchQuery)}"</p>`;
+      } else {
+        emptyEl.innerHTML = `<p class="muted">No splits yet. Process some tracks to see them here.</p>`;
+      }
+      emptyEl.style.display = "block";
+    }
     return;
   }
 
@@ -46,7 +98,7 @@ function renderSplits(tracks) {
 
   // Group tracks by artist
   const byArtist = {};
-  for (const track of tracks) {
+  for (const track of displayTracks) {
     const artist = track.artist || "Unknown Artist";
     if (!byArtist[artist]) {
       byArtist[artist] = [];
@@ -56,7 +108,14 @@ function renderSplits(tracks) {
 
   let html = "";
 
-  for (const [artist, artistTracks] of Object.entries(byArtist)) {
+  // Get artist keys and sort them if in alpha mode
+  let artistKeys = Object.keys(byArtist);
+  if (sortMode === "alpha") {
+    artistKeys.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  }
+
+  for (const artist of artistKeys) {
+    const artistTracks = byArtist[artist];
     html += `<div class="splits-artist-group">`;
     html += `<div class="splits-artist-header">${escapeHtml(artist)}</div>`;
 
@@ -674,10 +733,43 @@ export function stopPlayback() {
  */
 export function setupSplits() {
   const refreshBtn = $("#btn-refresh-splits");
+  const searchInput = $("#splits-search");
+  const sortBtns = document.querySelectorAll(".splits-sort-toggle .sort-btn");
 
   if (refreshBtn) {
     refreshBtn.addEventListener("click", refreshSplits);
   }
+
+  // Search input handler with debounce
+  if (searchInput) {
+    let debounceTimer = null;
+    searchInput.addEventListener("input", (e) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        searchQuery = e.target.value;
+        renderSplits(splitsData);
+      }, 150);
+    });
+  }
+
+  // Sort toggle handlers
+  sortBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const newSort = btn.dataset.sort;
+      if (newSort === sortMode) return;
+
+      sortMode = newSort;
+
+      // Update button states
+      sortBtns.forEach((b) => {
+        const isActive = b.dataset.sort === sortMode;
+        b.classList.toggle("active", isActive);
+        b.setAttribute("aria-pressed", isActive);
+      });
+
+      renderSplits(splitsData);
+    });
+  });
 
   // Initial load
   refreshSplits();

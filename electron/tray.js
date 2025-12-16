@@ -18,7 +18,7 @@ const rootDir = path.join(__dirname, "..");
  */
 function createTray() {
   // Use the app icon for the tray, resized for system tray
-  const iconPath = path.join(rootDir, "splitro.png");
+  const iconPath = path.join(rootDir, "splitboy_icon.png");
   const image = nativeImage.createFromPath(iconPath);
 
   // Resize for tray (16x16 on most systems)

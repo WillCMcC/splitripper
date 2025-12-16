@@ -24,15 +24,15 @@
     <main>
       <section class="left">
         <nav class="tabs" role="tablist" aria-label="Main navigation">
-          <button class="tab-button active" data-tab="local-files" role="tab" aria-selected="true" aria-controls="local-files-tab">
+          <button class="tab-button active" data-tab="search" role="tab" aria-selected="true" aria-controls="search-tab">Search</button>
+          <button class="tab-button" data-tab="local-files" role="tab" aria-selected="false" aria-controls="local-files-tab">
             Local Files
           </button>
           <button class="tab-button" data-tab="splits" role="tab" aria-selected="false" aria-controls="splits-tab">Splits</button>
-          <button class="tab-button" data-tab="search" role="tab" aria-selected="false" aria-controls="search-tab">Search</button>
           <button class="tab-button" data-tab="settings" role="tab" aria-selected="false" aria-controls="settings-tab">Settings</button>
         </nav>
 
-        <div class="tab-content" id="search-tab" role="tabpanel" aria-labelledby="search-tab">
+        <div class="tab-content active" id="search-tab" role="tabpanel" aria-labelledby="search-tab">
           <h2>Search YouTube</h2>
           <div class="row">
             <input
@@ -56,7 +56,7 @@
           <div id="results" class="list" role="list" aria-label="Search results"></div>
         </div>
 
-        <div class="tab-content active" id="local-files-tab" role="tabpanel" aria-labelledby="local-files-tab">
+        <div class="tab-content" id="local-files-tab" role="tabpanel" aria-labelledby="local-files-tab">
           <div class="tab-header">
             <div class="tab-title-section">
               <h2>Local Files</h2>
@@ -97,6 +97,20 @@
             <button id="btn-refresh-splits" class="secondary" aria-label="Refresh splits list">
               Refresh
             </button>
+          </div>
+
+          <div class="splits-toolbar">
+            <input
+              id="splits-search"
+              type="text"
+              placeholder="Search splits..."
+              aria-label="Search splits"
+              class="splits-search-input"
+            />
+            <div class="splits-sort-toggle" role="group" aria-label="Sort options">
+              <button type="button" class="sort-btn active" data-sort="recent" aria-pressed="true">Recent</button>
+              <button type="button" class="sort-btn" data-sort="alpha" aria-pressed="false">A-Z</button>
+            </div>
           </div>
 
           <div id="splits-empty" class="splits-empty" style="display: none;">

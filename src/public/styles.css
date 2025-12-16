@@ -2311,6 +2311,66 @@ h3 {
    Splits Tab - Browse and drag processed stems
    ============================================================================= */
 
+.splits-toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.splits-search-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-size: 0.875rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.splits-search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.splits-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.splits-sort-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.splits-sort-toggle .sort-btn {
+  padding: 8px 12px;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.splits-sort-toggle .sort-btn:first-child {
+  border-right: 1px solid var(--border);
+}
+
+.splits-sort-toggle .sort-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text);
+}
+
+.splits-sort-toggle .sort-btn.active {
+  background: var(--accent);
+  color: white;
+}
+
 .splits-list {
   display: flex;
   flex-direction: column;

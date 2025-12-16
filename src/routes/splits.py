@@ -78,16 +78,27 @@ def scan_splits_directory(output_dir: str) -> List[Dict[str, Any]]:
         logger.error(f"Error scanning splits directory: {e}")
         return tracks
 
-    # Convert to list format
+    # Convert to list format, including modification time for sorting
     for (artist, title), stems in track_map.items():
+        # Get the most recent modification time from any stem file
+        mtime = 0
+        for stem_path in stems.values():
+            try:
+                file_mtime = os.path.getmtime(stem_path)
+                if file_mtime > mtime:
+                    mtime = file_mtime
+            except OSError:
+                pass
+
         tracks.append({
             "artist": artist,
             "title": title,
             "stems": stems,
+            "mtime": mtime,
         })
 
-    # Sort by artist, then title
-    tracks.sort(key=lambda t: (t["artist"].lower(), t["title"].lower()))
+    # Sort by most recent first (default order)
+    tracks.sort(key=lambda t: t["mtime"], reverse=True)
 
     return tracks
 
