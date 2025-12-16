@@ -17,6 +17,9 @@ function createTray() {
   // Use app.getAppPath() for reliable path resolution in both dev and production
   const appPath = app.getAppPath();
   const iconPath = path.join(appPath, "splitboy_icon.png");
+
+  console.log("Creating tray icon from:", iconPath);
+
   const image = nativeImage.createFromPath(iconPath);
 
   // Check if image loaded successfully
@@ -25,10 +28,15 @@ function createTray() {
     return;
   }
 
-  // Resize for tray (16x16 on most systems, 22x22 for macOS retina)
-  const trayImage = image.resize({ width: 22, height: 22 });
+  console.log("Original image size:", image.getSize());
+
+  // Resize for tray (18x18 is common for macOS menu bar icons)
+  const trayImage = image.resize({ width: 18, height: 18 });
+
+  console.log("Tray image size:", trayImage.getSize(), "isEmpty:", trayImage.isEmpty());
 
   tray = new Tray(trayImage);
+  console.log("Tray created successfully");
   tray.setToolTip("SplitBoy - 0/0 tracks");
 
   // Click to show/hide window
