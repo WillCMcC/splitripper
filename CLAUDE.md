@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Releases & Downloads
+
+**Stable download link (DO NOT CHANGE):**
+```
+https://github.com/WillCMcC/splitripper/releases/latest/download/SplitBoy-arm64-mac.zip
+```
+
+This URL always points to the latest release. The artifact name `SplitBoy-arm64-mac.zip` must remain consistent across all releases to preserve this link.
+
 ## Project Overview
 
 SplitBoy is an Electron desktop application that downloads audio from YouTube and separates it into vocals and instrumental tracks using Demucs. It bundles a complete Python runtime and runs a FastAPI backend server that the Electron frontend communicates with.
