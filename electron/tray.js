@@ -3,26 +3,30 @@
  * Handles creating and updating the system tray icon
  */
 
-const { Tray, nativeImage } = require("electron");
+const { app, Tray, nativeImage } = require("electron");
 const path = require("path");
 const { getMainWindow } = require("./window");
 
 // Module state
 let tray = null;
 
-// Root directory (parent of electron/)
-const rootDir = path.join(__dirname, "..");
-
 /**
  * Create the system tray icon
  */
 function createTray() {
-  // Use the app icon for the tray, resized for system tray
-  const iconPath = path.join(rootDir, "splitboy_icon.png");
+  // Use app.getAppPath() for reliable path resolution in both dev and production
+  const appPath = app.getAppPath();
+  const iconPath = path.join(appPath, "splitboy_icon.png");
   const image = nativeImage.createFromPath(iconPath);
 
-  // Resize for tray (16x16 on most systems)
-  const trayImage = image.resize({ width: 16, height: 16 });
+  // Check if image loaded successfully
+  if (image.isEmpty()) {
+    console.error("Failed to load tray icon from:", iconPath);
+    return;
+  }
+
+  // Resize for tray (16x16 on most systems, 22x22 for macOS retina)
+  const trayImage = image.resize({ width: 22, height: 22 });
 
   tray = new Tray(trayImage);
   tray.setToolTip("SplitBoy - 0/0 tracks");

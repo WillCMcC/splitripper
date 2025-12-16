@@ -313,13 +313,21 @@ export function setupAdaptivePolling() {
   };
   startProgressLoop();
 
-  // Pause polling when tab is hidden to reduce CPU/network usage
+  // Slow down polling when tab is hidden (but don't stop completely so progress still updates)
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
+      // When hidden, switch to slow polling instead of stopping
+      backoffStage = 2;
       stopTimer();
       stopProgressLoop();
+      // Use slower interval for background updates
+      scheduleNext();
+      progressTimer = setInterval(refreshProgress, SLOW_POLL_INTERVAL);
     } else {
-      // Resume polling when tab becomes visible again
+      // Resume fast polling when tab becomes visible again
+      resetToFast();
+      stopTimer();
+      stopProgressLoop();
       scheduleNext();
       startProgressLoop();
     }
