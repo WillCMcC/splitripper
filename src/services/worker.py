@@ -29,17 +29,13 @@ BASE_DIR = Path(__file__).parent.parent.resolve()
 # Note: Demucs operations now run in parallel based on max_concurrency setting.
 # Previously had a Semaphore(1) but the "hangs" were actually just slow htdemucs_ft processing.
 
-# Load ytdl helpers
-import importlib.util
-_spec = importlib.util.spec_from_file_location(
-    "ytdl_interactive_mod", str(BASE_DIR / "ytdl_interactive.py")
-)
-_mod = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_mod)
-get_video_info = getattr(_mod, "get_video_info")
+# Import ytdl helpers using normal imports
+from ytdl_interactive import get_video_info
 
 
-def _split_and_stage(audio_file: Path, item: QueueItem) -> Tuple[bool, Optional[str], Optional[Path]]:
+def _split_and_stage(
+    audio_file: Path, item: QueueItem
+) -> Tuple[bool, Optional[str], Optional[Path]]:
     """
     Run Demucs on audio_file and move results to final destination.
 
@@ -51,7 +47,9 @@ def _split_and_stage(audio_file: Path, item: QueueItem) -> Tuple[bool, Optional[
         if folder_path:
             out_root = Path(folder_path)
         else:
-            out_root = Path(app_state.get_config_value("output_dir") or get_default_desktop_path())
+            out_root = Path(
+                app_state.get_config_value("output_dir") or get_default_desktop_path()
+            )
         out_root.mkdir(parents=True, exist_ok=True)
 
         # Determine artist and song names
@@ -74,13 +72,17 @@ def _split_and_stage(audio_file: Path, item: QueueItem) -> Tuple[bool, Optional[
             item.downloaded = True
 
         # Get stem mode for this item
-        stem_mode = item.stem_mode or app_state.get_config_value("stem_mode", DEFAULT_STEM_MODE)
+        stem_mode = item.stem_mode or app_state.get_config_value(
+            "stem_mode", DEFAULT_STEM_MODE
+        )
         stem_config = STEM_MODES.get(stem_mode, STEM_MODES[DEFAULT_STEM_MODE])
 
         # Run Demucs (parallel operations allowed based on max_concurrency)
         logger.info(f"Starting Demucs for: {item.title or item.id}")
         stems, err = run_demucs_separation(audio_file, tmp_root, item)
-        logger.info(f"Demucs returned for {item.title or item.id}: stems={bool(stems)}, err={err}")
+        logger.info(
+            f"Demucs returned for {item.title or item.id}: stems={bool(stems)}, err={err}"
+        )
 
         if stems:
             # Move stems to final destinations
@@ -194,7 +196,9 @@ def _process_youtube_item(item: QueueItem) -> None:
                 pass
 
         # Create temp directory for download
-        safe_title = re.sub(r'[<>:"/\\|?*]', "_", (item.title or "download")).strip(". ")[:100]
+        safe_title = re.sub(r'[<>:"/\\|?*]', "_", (item.title or "download")).strip(
+            ". "
+        )[:100]
         temp_dir = Path(tempfile.gettempdir()) / "splitboy_downloads" / safe_title
         temp_dir.mkdir(parents=True, exist_ok=True)
 
@@ -240,18 +244,22 @@ def _process_youtube_item(item: QueueItem) -> None:
             "quiet": True,
             "noprogress": False,
             "outtmpl": str(temp_dir / "%(title)s.%(ext)s"),
-            "postprocessors": [{
-                "key": "FFmpegExtractAudio",
-                "preferredcodec": "mp3",
-                "preferredquality": "192",
-            }],
+            "postprocessors": [
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3",
+                    "preferredquality": "192",
+                }
+            ],
             "progress_hooks": [progress_hook],
             "noplaylist": True,
         }
 
         # Add ffmpeg location if bundled
         ffmpeg_dir = BASE_DIR.parent / "python_runtime_bundle" / "ffmpeg"
-        logger.info(f"yt-dlp ffmpeg_dir check: {ffmpeg_dir} exists={ffmpeg_dir.exists()}")
+        logger.info(
+            f"yt-dlp ffmpeg_dir check: {ffmpeg_dir} exists={ffmpeg_dir.exists()}"
+        )
         if ffmpeg_dir.exists():
             ydl_opts["ffmpeg_location"] = str(ffmpeg_dir)
             logger.info(f"yt-dlp ffmpeg_location set to: {ffmpeg_dir}")
@@ -353,7 +361,9 @@ def download_worker():
 
                 # Launch new items up to max_concurrency
                 can_launch = max(0, app_state.max_concurrency - app_state.active)
-                queued_items = [it for it in app_state.get_queue_items() if it.status == "queued"]
+                queued_items = [
+                    it for it in app_state.get_queue_items() if it.status == "queued"
+                ]
 
                 if can_launch > 0 and queued_items:
                     to_start = queued_items[:can_launch]
@@ -366,7 +376,9 @@ def download_worker():
                             item.downloaded = False
                         app_state.increment_active()
 
-                        t = threading.Thread(target=_process_item, args=(item,), daemon=True)
+                        t = threading.Thread(
+                            target=_process_item, args=(item,), daemon=True
+                        )
                         threads.append(t)
                         t.start()
 

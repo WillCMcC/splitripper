@@ -11,14 +11,15 @@ from typing import List, Dict, Any
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
+from lib.constants import AUDIO_EXTENSIONS
 from lib.logging_config import get_logger
 from lib.state import app_state
 
 router = APIRouter()
 logger = get_logger("routes.splits")
 
-# Audio file extensions we care about
-AUDIO_EXTENSIONS = {".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg", ".opus"}
+# Convert frozenset to set with dots for file suffix matching
+AUDIO_EXTENSIONS_WITH_DOT = {f".{ext}" for ext in AUDIO_EXTENSIONS}
 
 
 def scan_splits_directory(output_dir: str) -> List[Dict[str, Any]]:
@@ -63,7 +64,7 @@ def scan_splits_directory(output_dir: str) -> List[Dict[str, Any]]:
                     if not audio_file.is_file():
                         continue
 
-                    if audio_file.suffix.lower() not in AUDIO_EXTENSIONS:
+                    if audio_file.suffix.lower() not in AUDIO_EXTENSIONS_WITH_DOT:
                         continue
 
                     # Track title is the filename without extension
@@ -90,12 +91,14 @@ def scan_splits_directory(output_dir: str) -> List[Dict[str, Any]]:
             except OSError:
                 pass
 
-        tracks.append({
-            "artist": artist,
-            "title": title,
-            "stems": stems,
-            "mtime": mtime,
-        })
+        tracks.append(
+            {
+                "artist": artist,
+                "title": title,
+                "stems": stems,
+                "mtime": mtime,
+            }
+        )
 
     # Sort by most recent first (default order)
     tracks.sort(key=lambda t: t["mtime"], reverse=True)

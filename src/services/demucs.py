@@ -14,7 +14,12 @@ import time
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
-from lib.constants import DEMUCS_MODELS, DEFAULT_DEMUCS_MODEL, STEM_MODES, DEFAULT_STEM_MODE
+from lib.constants import (
+    DEMUCS_MODELS,
+    DEFAULT_DEMUCS_MODEL,
+    STEM_MODES,
+    DEFAULT_STEM_MODE,
+)
 from lib.logging_config import get_logger
 from lib.state import app_state, QueueItem
 from lib.utils import parse_time_to_seconds
@@ -94,7 +99,9 @@ def run_demucs_separation(
     if model is None:
         model = app_state.get_config_value("demucs_model", DEFAULT_DEMUCS_MODEL)
     if stem_mode is None:
-        stem_mode = item.stem_mode or app_state.get_config_value("stem_mode", DEFAULT_STEM_MODE)
+        stem_mode = item.stem_mode or app_state.get_config_value(
+            "stem_mode", DEFAULT_STEM_MODE
+        )
 
     # Validate model and stem_mode
     if model not in DEMUCS_MODELS:
@@ -119,25 +126,36 @@ def run_demucs_separation(
         # Check if demucs is available
         chk = subprocess.run(
             [python_exe, "-m", "demucs", "--help"],
-            capture_output=True, text=True, env=env
+            capture_output=True,
+            text=True,
+            env=env,
         )
         if chk.returncode != 0:
             logger.info("Installing demucs (this may take several minutes)...")
             subprocess.run(
-                [python_exe, "-m", "pip", "install", "--upgrade", "demucs"],
-                check=True
+                [python_exe, "-m", "pip", "install", "--upgrade", "demucs"], check=True
             )
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Build command
         cmd = [
-            python_exe, "-m", "demucs.separate",
-            "-n", model,
+            python_exe,
+            "-m",
+            "demucs.separate",
+            "-n",
+            model,
             "--mp3",
-            "--segment", "10",  # Process in 10-second chunks to reduce memory usage
-            "-o", str(output_dir),
+            "-o",
+            str(output_dir),
         ]
+
+        # Add segment size for non-transformer models (mdx variants)
+        # Transformer models (htdemucs*) have a max segment of 7.8s and use their own default
+        if model.startswith("mdx"):
+            cmd.extend(
+                ["--segment", "10"]
+            )  # Process in 10-second chunks to reduce memory
 
         # Add two-stems flag for 2-stem mode
         if stem_mode == "2":
@@ -188,22 +206,28 @@ def run_demucs_separation(
         start_time = time.time()
         last_status_log = start_time
         DRAIN_TIMEOUT = 3.0  # Seconds to drain queue after process exits
-        MAX_TIMEOUT = 3600.0  # 1 hour max - htdemucs_ft on CPU can be slow for long songs
+        MAX_TIMEOUT = (
+            3600.0  # 1 hour max - htdemucs_ft on CPU can be slow for long songs
+        )
         STATUS_LOG_INTERVAL = 30.0  # Log status every 30 seconds
 
         while True:
             # Periodic status log for debugging hangs
             now = time.time()
             if now - last_status_log > STATUS_LOG_INTERVAL:
-                logger.info(f"Demucs loop status: elapsed={now - start_time:.1f}s, "
-                           f"process_finished={process_finished}, poll={proc.poll()}, "
-                           f"progress={last_progress:.2f}, queue_size={output_queue.qsize()}")
+                logger.info(
+                    f"Demucs loop status: elapsed={now - start_time:.1f}s, "
+                    f"process_finished={process_finished}, poll={proc.poll()}, "
+                    f"progress={last_progress:.2f}, queue_size={output_queue.qsize()}"
+                )
                 last_status_log = now
 
             # Check for overall timeout to prevent infinite hangs
             elapsed = time.time() - start_time
             if elapsed > MAX_TIMEOUT:
-                logger.error(f"Demucs overall timeout reached ({MAX_TIMEOUT}s), killing process")
+                logger.error(
+                    f"Demucs overall timeout reached ({MAX_TIMEOUT}s), killing process"
+                )
                 proc.kill()
                 proc.wait()
                 app_state.unregister_process(item.id)
@@ -281,12 +305,14 @@ def run_demucs_separation(
         logger.info(f"Demucs process finished with return code: {proc.returncode}")
 
         if proc.returncode != 0:
-            error_msg = '\n'.join(error_lines[-5:]) if error_lines else "demucs failed"
+            error_msg = "\n".join(error_lines[-5:]) if error_lines else "demucs failed"
             logger.error(f"Demucs failed: {error_msg}")
             return None, error_msg[:300]
 
         # Find output files based on stem mode
-        logger.debug(f"Looking for outputs in {output_dir} for stem_mode={stem_mode}, model={model}")
+        logger.debug(
+            f"Looking for outputs in {output_dir} for stem_mode={stem_mode}, model={model}"
+        )
         stems = _find_demucs_outputs(output_dir, stem_mode, model)
         if stems:
             logger.info(f"Found {len(stems)} stem files: {list(stems.keys())}")
@@ -300,7 +326,9 @@ def run_demucs_separation(
         return None, str(e)[:300]
 
 
-def _find_demucs_outputs(output_dir: Path, stem_mode: str, model: str) -> Optional[Dict[str, Path]]:
+def _find_demucs_outputs(
+    output_dir: Path, stem_mode: str, model: str
+) -> Optional[Dict[str, Path]]:
     """
     Find Demucs output files based on stem mode.
 

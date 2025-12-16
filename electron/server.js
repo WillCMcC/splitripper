@@ -310,7 +310,7 @@ function requestShutdown(timeoutMs = 400) {
         {
           method: "POST",
           hostname: "127.0.0.1",
-          port: serverPort || 9000,
+          port: serverPort ?? 9000,
           path: "/api/_shutdown",
           timeout: timeoutMs,
         },

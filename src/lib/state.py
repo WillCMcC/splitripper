@@ -19,6 +19,7 @@ logger = get_logger("state")
 @dataclass
 class QueueItem:
     """Represents an item in the processing queue."""
+
     id: str
     url: str
     title: Optional[str] = None
@@ -103,6 +104,7 @@ class AppState:
         # Core state
         self._config: Dict[str, Any] = {}
         self._queue: List[QueueItem] = []
+        self._queue_index: Dict[str, QueueItem] = {}  # O(1) lookup by item ID
         self._running: bool = False
         self._worker_thread: Optional[threading.Thread] = None
         self._max_concurrency: int = DEFAULT_CONCURRENCY
@@ -163,20 +165,21 @@ class AppState:
     def add_to_queue(self, item: QueueItem) -> None:
         with self._lock:
             self._queue.append(item)
+            self._queue_index[item.id] = item
 
     def get_queue_item(self, item_id: str) -> Optional[QueueItem]:
+        """Get a queue item by ID in O(1) time."""
         with self._lock:
-            for item in self._queue:
-                if item.id == item_id:
-                    return item
-            return None
+            return self._queue_index.get(item_id)
 
     def clear_queue(self, running_only: bool = False) -> None:
         with self._lock:
             if running_only:
                 self._queue = [it for it in self._queue if it.status == "running"]
+                self._queue_index = {it.id: it for it in self._queue}
             else:
                 self._queue = []
+                self._queue_index = {}
 
     def get_queued_items(self) -> List[QueueItem]:
         """Get items with status 'queued'."""
@@ -235,9 +238,16 @@ class AppState:
             self._worker_thread = thread
 
     # Progress tracking for long operations
-    def set_progress(self, request_id: str, phase: str, current: int = 0,
-                     total: int = 0, message: str = "") -> None:
+    def set_progress(
+        self,
+        request_id: str,
+        phase: str,
+        current: int = 0,
+        total: int = 0,
+        message: str = "",
+    ) -> None:
         import time
+
         with self._progress_lock:
             self._progress_map[request_id] = {
                 "phase": phase,
@@ -249,6 +259,7 @@ class AppState:
 
     def update_progress(self, request_id: str, **kwargs) -> None:
         import time
+
         with self._progress_lock:
             if request_id in self._progress_map:
                 self._progress_map[request_id].update(kwargs)
@@ -264,15 +275,14 @@ class AppState:
 
     def get_progress(self, request_id: str) -> Dict[str, Any]:
         with self._progress_lock:
-            return self._progress_map.get(request_id, {
-                "phase": "listing",
-                "current": 0,
-                "total": 0,
-                "message": "Starting…"
-            })
+            return self._progress_map.get(
+                request_id,
+                {"phase": "listing", "current": 0, "total": 0, "message": "Starting…"},
+            )
 
     def finish_progress(self, request_id: str, error: Optional[str] = None) -> None:
         import time
+
         with self._progress_lock:
             if error:
                 self._progress_map[request_id] = {
@@ -294,6 +304,7 @@ class AppState:
     def cleanup_old_progress(self, max_age_seconds: float = 300) -> int:
         """Remove progress entries older than max_age_seconds. Returns count removed."""
         import time
+
         now = time.time()
         removed = 0
         with self._progress_lock:
@@ -303,7 +314,10 @@ class AppState:
                 if progress.get("_timestamp", now) < now - max_age_seconds:
                     to_remove.append(request_id)
                 # Also remove completed entries after shorter time
-                elif progress.get("phase") == "done" and progress.get("_timestamp", now) < now - 60:
+                elif (
+                    progress.get("phase") == "done"
+                    and progress.get("_timestamp", now) < now - 60
+                ):
                     to_remove.append(request_id)
             for request_id in to_remove:
                 del self._progress_map[request_id]
@@ -330,7 +344,13 @@ class AppState:
             if not items:
                 return {
                     "progress": 0.0,
-                    "counts": {"queued": 0, "running": 0, "done": 0, "error": 0, "canceled": 0}
+                    "counts": {
+                        "queued": 0,
+                        "running": 0,
+                        "done": 0,
+                        "error": 0,
+                        "canceled": 0,
+                    },
                 }
 
             counts = {"queued": 0, "running": 0, "done": 0, "error": 0, "canceled": 0}

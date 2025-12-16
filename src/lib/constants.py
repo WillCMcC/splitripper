@@ -34,10 +34,8 @@ ENRICHMENT_CAP = 1000
 PROGRESS_UPDATE_THROTTLE = 0.08
 PROCESSING_UPDATE_THROTTLE = 0.3
 
-# Audio file extensions
-AUDIO_EXTENSIONS = frozenset([
-    "mp3", "wav", "flac", "aac", "m4a", "ogg", "wma", "opus"
-])
+# Audio file extensions (without dots - add dots when matching file suffixes)
+AUDIO_EXTENSIONS = frozenset(["mp3", "wav", "flac", "aac", "m4a", "ogg", "opus", "wma"])
 
 # Supported download formats (in order of preference)
 DOWNLOAD_AUDIO_FORMATS = ["mp3", "m4a", "webm", "wav", "opus"]

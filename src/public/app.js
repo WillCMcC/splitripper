@@ -4,8 +4,11 @@
  * This is the main entry point that imports and wires up all modules.
  */
 
+// State management (must be imported first to set up window.__ compatibility)
+import { isBootBound, setBootBound } from "./state.js";
+
 // Core API and utilities
-import { $, api } from './api.js';
+import { $, api } from "./api.js";
 
 // Queue management
 import { setRefreshQueue as setQueueRefreshQueue } from './queue.js';
@@ -210,8 +213,8 @@ function setupCookieHandlers() {
 // DOMContentLoaded handler
 document.addEventListener("DOMContentLoaded", () => {
   // Ensure we only bind boot once
-  if (window.__bootBound) return;
-  window.__bootBound = true;
+  if (isBootBound()) return;
+  setBootBound(true);
 
   setupDirectoryPicker();
   setupTabs();

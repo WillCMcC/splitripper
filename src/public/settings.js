@@ -3,6 +3,7 @@
  */
 
 import { $, $$, api } from './api.js';
+import { stopPlayback } from './splits.js';
 
 /**
  * Setup directory picker for output folder
@@ -113,6 +114,16 @@ export function setupTabs() {
   tabButtons.forEach((button) => {
     button.addEventListener("click", (e) => {
       const targetTab = button.dataset.tab;
+      const currentTab = document.querySelector(".tab-button.active")?.dataset.tab;
+
+      // Stop audio playback when leaving splits tab
+      if (currentTab === "splits" && targetTab !== "splits") {
+        try {
+          stopPlayback();
+        } catch (err) {
+          console.warn("Failed to stop playback on tab switch:", err);
+        }
+      }
 
       // Remove active class from all buttons and contents
       tabButtons.forEach((btn) => {
