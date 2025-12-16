@@ -127,6 +127,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(rootDir, "preload.js"),
+      backgroundThrottling: false, // Keep timers running at full speed in background
     },
     titleBarStyle: "hidden",
     trafficLightPosition: { x: 20, y: 20 },

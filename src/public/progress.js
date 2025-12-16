@@ -313,23 +313,8 @@ export function setupAdaptivePolling() {
   };
   startProgressLoop();
 
-  // Slow down polling when tab is hidden (but don't stop completely so progress still updates)
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      // When hidden, switch to slow polling instead of stopping
-      backoffStage = 2;
-      stopTimer();
-      stopProgressLoop();
-      // Use slower interval for background updates
-      scheduleNext();
-      progressTimer = setInterval(refreshProgress, SLOW_POLL_INTERVAL);
-    } else {
-      // Resume fast polling when tab becomes visible again
-      resetToFast();
-      stopTimer();
-      stopProgressLoop();
-      scheduleNext();
-      startProgressLoop();
-    }
-  });
+  // Note: Background throttling is disabled at the Electron level (backgroundThrottling: false
+  // and disable-renderer-backgrounding command line switch), so we maintain fast polling
+  // even when the window is hidden to ensure progress bars update smoothly.
+  // The adaptive backoff based on queue activity still applies for idle state.
 }

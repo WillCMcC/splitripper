@@ -7,6 +7,10 @@
 
 const { app, BrowserWindow } = require("electron");
 
+// Prevent Chromium from throttling timers and rendering in background
+app.commandLine.appendSwitch("disable-renderer-backgrounding");
+app.commandLine.appendSwitch("disable-background-timer-throttling");
+
 // Import modules from electron/
 const { startServer, stopServer, getServerProcess } = require("./electron/server");
 const { createWindow } = require("./electron/window");

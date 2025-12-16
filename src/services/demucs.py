@@ -86,6 +86,10 @@ def run_demucs_separation(
     # Set Python unbuffered mode for real-time output
     env["PYTHONUNBUFFERED"] = "1"
 
+    # Limit PyTorch threads to prevent CPU oversubscription and reduce memory pressure
+    env["OMP_NUM_THREADS"] = "4"
+    env["MKL_NUM_THREADS"] = "4"
+
     # Get model and stem mode from config if not specified
     if model is None:
         model = app_state.get_config_value("demucs_model", DEFAULT_DEMUCS_MODEL)
@@ -131,6 +135,7 @@ def run_demucs_separation(
             python_exe, "-m", "demucs.separate",
             "-n", model,
             "--mp3",
+            "--segment", "10",  # Process in 10-second chunks to reduce memory usage
             "-o", str(output_dir),
         ]
 

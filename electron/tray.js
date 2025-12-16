@@ -11,15 +11,15 @@ const { getMainWindow } = require("./window");
 let tray = null;
 
 /**
- * Create a simple fallback icon programmatically (blue circle)
+ * Create a monochrome template icon programmatically
+ * Pure black pixels with alpha channel - proper macOS template format
  */
 function createFallbackIcon() {
-  // Create a 22x22 blue circle icon as fallback
-  const size = 22;
+  const size = 16;
   const canvas = Buffer.alloc(size * size * 4);
   const centerX = size / 2;
   const centerY = size / 2;
-  const radius = 8;
+  const radius = 6;
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
@@ -27,13 +27,13 @@ function createFallbackIcon() {
       const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
 
       if (dist <= radius) {
-        // Blue color inside circle
-        canvas[idx] = 99;      // R
-        canvas[idx + 1] = 102; // G
-        canvas[idx + 2] = 241; // B (indigo-ish)
-        canvas[idx + 3] = 255; // A
+        // Pure black with full opacity (template image format)
+        canvas[idx] = 0;       // R - black
+        canvas[idx + 1] = 0;   // G - black
+        canvas[idx + 2] = 0;   // B - black
+        canvas[idx + 3] = 255; // A - opaque
       } else {
-        // Transparent outside
+        // Fully transparent outside
         canvas[idx] = 0;
         canvas[idx + 1] = 0;
         canvas[idx + 2] = 0;
@@ -42,7 +42,14 @@ function createFallbackIcon() {
     }
   }
 
-  return nativeImage.createFromBuffer(canvas, { width: size, height: size });
+  const image = nativeImage.createFromBuffer(canvas, { width: size, height: size });
+
+  // Mark as template image for macOS - system will colorize appropriately
+  if (process.platform === 'darwin') {
+    image.setTemplateImage(true);
+  }
+
+  return image;
 }
 
 /**
@@ -51,12 +58,13 @@ function createFallbackIcon() {
 function createTray() {
   const appPath = app.getAppPath();
 
-  // Try pre-sized tray icon first, then fall back to main icon
+  // Try Template-named icons first (Electron auto-detects these for macOS)
+  // Then fall back to regular icons
   const iconPaths = [
+    path.join(appPath, "trayTemplate.png"),           // Template-named for auto-detection
     path.join(appPath, "tray_icon.png"),
-    path.join(appPath, "splitboy_icon.png"),
+    path.join(process.resourcesPath || appPath, "trayTemplate.png"),
     path.join(process.resourcesPath || appPath, "tray_icon.png"),
-    path.join(process.resourcesPath || appPath, "splitboy_icon.png"),
   ];
 
   let trayImage = null;

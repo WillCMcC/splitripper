@@ -11,9 +11,9 @@ export const DOWNLOAD_PROGRESS_WEIGHT = 0.30;
 export const PROCESSING_PROGRESS_WEIGHT = 0.70;
 
 // Polling intervals (in milliseconds)
-export const FAST_POLL_INTERVAL = 1500;
-export const MEDIUM_POLL_INTERVAL = 5000;
-export const SLOW_POLL_INTERVAL = 10000;
+export const FAST_POLL_INTERVAL = 1000;   // More responsive progress updates
+export const MEDIUM_POLL_INTERVAL = 3000;
+export const SLOW_POLL_INTERVAL = 5000;
 export const PROGRESS_UPDATE_THROTTLE = 80;
 
 // Adaptive polling thresholds
