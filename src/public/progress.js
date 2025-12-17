@@ -202,6 +202,9 @@ function updateGlobalProgressDisplay(q, p) {
   const items = (q && q.items) || [];
   let totalProgress = 0;
 
+  // Check if there's active work (items that are not done/error)
+  const hasActiveWork = items.some(it => it.status !== "done" && it.status !== "error");
+
   if (items.length > 0) {
     items.forEach((it) => {
       let itemProgress = 0;
@@ -239,8 +242,19 @@ function updateGlobalProgressDisplay(q, p) {
   const pct = Math.floor(totalProgress * 100);
   const globalBar = $("#global-progress-bar");
   const globalText = $("#global-progress-text");
-  if (globalBar) globalBar.style.width = `${pct}%`;
-  if (globalText) globalText.textContent = `${pct}%`;
+  const progressRow = globalBar?.closest(".row");
+
+  // Hide progress bar when queue is empty or all work is complete
+  if (items.length === 0 || !hasActiveWork) {
+    if (progressRow) progressRow.style.display = "none";
+    // Reset progress state for next batch
+    window.__lastGlobalProgress = 0;
+    window.__lastItemCount = 0;
+  } else {
+    if (progressRow) progressRow.style.display = "";
+    if (globalBar) globalBar.style.width = `${pct}%`;
+    if (globalText) globalText.textContent = `${pct}%`;
+  }
 
   // Update ARIA
   const progressContainer = document.querySelector(".progress[role='progressbar']");
@@ -260,10 +274,11 @@ function updateGlobalProgressDisplay(q, p) {
     }
 
     if (window.electronAPI && window.electronAPI.updateTaskbarProgress) {
+      // Pass total: 0 when no active work to clear the taskbar progress
       window.electronAPI.updateTaskbarProgress({
         completed: done,
-        total: total,
-        progress: totalProgress,
+        total: hasActiveWork ? total : 0,
+        progress: hasActiveWork ? totalProgress : 0,
       });
     }
   } catch (e) {

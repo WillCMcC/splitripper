@@ -96,9 +96,9 @@ export function renderQueue(queueState) {
     }
 
     // Download progress bar and labels
-    // Do not render any progress bar container while queued
+    // Do not render progress bar for queued or done items
     let progWrap = null;
-    if (it.status !== "queued") {
+    if (it.status !== "queued" && it.status !== "done") {
       progWrap = document.createElement("div");
       progWrap.className = "progress";
 

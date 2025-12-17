@@ -3,7 +3,7 @@
  */
 
 import { $, $$, api } from './api.js';
-import { stopPlayback } from './splits.js';
+import { stopPlayback, refreshSplits } from './splits.js';
 
 /**
  * Setup directory picker for output folder
@@ -122,6 +122,15 @@ export function setupTabs() {
           stopPlayback();
         } catch (err) {
           console.warn("Failed to stop playback on tab switch:", err);
+        }
+      }
+
+      // Refresh splits when entering splits tab
+      if (targetTab === "splits") {
+        try {
+          refreshSplits();
+        } catch (err) {
+          console.warn("Failed to refresh splits on tab switch:", err);
         }
       }
 
