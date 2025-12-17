@@ -19,7 +19,6 @@ let currentLocalFiles = [];
 
 // Models state
 let modelsData = null;
-let isDownloading = {};
 
 // UI state
 let addingAll = false;
@@ -205,23 +204,6 @@ export function setModelsData(data) {
   modelsData = data;
 }
 
-/**
- * Check if a model is downloading
- * @param {string} modelName
- * @returns {boolean}
- */
-export function isModelDownloading(modelName) {
-  return isDownloading[modelName] || false;
-}
-
-/**
- * Set model downloading state
- * @param {string} modelName
- * @param {boolean} value
- */
-export function setModelDownloading(modelName, value) {
-  isDownloading[modelName] = value;
-}
 
 // =============================================================================
 // UI State
@@ -305,11 +287,6 @@ if (typeof window !== 'undefined') {
     __modelsData: {
       get: () => modelsData,
       set: (v) => { modelsData = v; },
-      configurable: true,
-    },
-    __isDownloading: {
-      get: () => isDownloading,
-      set: (v) => { Object.assign(isDownloading, v); },
       configurable: true,
     },
     __addingAll: {

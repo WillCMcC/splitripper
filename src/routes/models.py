@@ -121,19 +121,6 @@ def _is_model_downloaded(model_name: str) -> bool:
 
     logger.debug(f"Model {model_name}: all {len(signatures)} signatures found")
     return True
-        logger.debug(f"No signatures found for {model_name} and no .th files in cache")
-        return False
-
-    # Check if all required signature files exist
-    for sig in signatures:
-        # Files are named like "{sig}-{checksum}.th"
-        matches = list(cache_dir.glob(f"{sig}-*.th"))
-        if not matches:
-            logger.debug(f"Model {model_name}: signature {sig} not found in cache")
-            return False
-
-    logger.debug(f"Model {model_name}: all {len(signatures)} signatures found")
-    return True
 
 
 @router.get("/models")
