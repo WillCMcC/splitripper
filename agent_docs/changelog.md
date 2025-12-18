@@ -2,6 +2,13 @@
 
 Version history and recent improvements to SplitBoy.
 
+## v1.2.4 - HD Mode
+
+### New Features
+- **HD Mode toggle** - Enable higher quality stem separation using multiple processing passes (shifts=5)
+- HD Mode produces cleaner vocals with fewer artifacts and less bleed between instruments
+- Processing takes ~5× longer but significantly improves separation quality
+
 ## v1.2.3 - Dropdown Fixes and Server Refactor
 
 ### Bug Fixes
