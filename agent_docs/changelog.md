@@ -2,6 +2,16 @@
 
 Version history and recent improvements to SplitBoy.
 
+## v1.2.3 - Dropdown Fixes and Server Refactor
+
+### Bug Fixes
+- Fixed model and stem mode dropdowns losing user selection after model downloads
+- Dropdowns now properly sync with server state on initial load
+
+### Code Organization
+- Extracted `server-env.js` from `server.js` for cleaner platform-specific environment handling
+- Centralized Python runtime detection and PATH configuration
+
 ## v1.2.0 - Major Refactor and Bug Fixes
 
 ### Code Organization
