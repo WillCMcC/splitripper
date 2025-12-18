@@ -149,8 +149,8 @@ try:
         allow_headers=["*"],
         allow_credentials=False,
     )
-except Exception:
-    pass
+except Exception as e:
+    logger.warning(f"Failed to add CORS middleware: {e}")
 
 # Static files
 if not PUBLIC_DIR.exists():

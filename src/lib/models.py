@@ -4,6 +4,28 @@ from pydantic import BaseModel, Field, field_validator
 from lib.constants import AUDIO_EXTENSIONS, DEMUCS_MODELS, STEM_MODES
 
 
+# Shared validator functions
+def validate_stem_mode_value(v: Optional[str]) -> Optional[str]:
+    """Validate stem_mode against STEM_MODES constants."""
+    if v is not None and v not in STEM_MODES:
+        return None  # Invalid modes are ignored
+    return v
+
+
+def validate_model_value(v: Optional[str]) -> Optional[str]:
+    """Validate demucs_model against DEMUCS_MODELS constants."""
+    if v is not None and v not in DEMUCS_MODELS:
+        return None
+    return v
+
+
+def validate_model_value_strict(v: str) -> str:
+    """Validate demucs_model with strict error raising."""
+    if v not in DEMUCS_MODELS:
+        raise ValueError(f"Unknown model: {v}")
+    return v
+
+
 class AddQueueRequest(BaseModel):
     """Request to add YouTube URLs to queue."""
     urls: List[str] = Field(..., min_length=1)
@@ -13,9 +35,7 @@ class AddQueueRequest(BaseModel):
     @field_validator('stem_mode')
     @classmethod
     def validate_stem_mode(cls, v):
-        if v is not None and v not in STEM_MODES:
-            return None  # Invalid modes are ignored
-        return v
+        return validate_stem_mode_value(v)
 
 
 class AddQueueLocalRequest(BaseModel):
@@ -27,9 +47,7 @@ class AddQueueLocalRequest(BaseModel):
     @field_validator('stem_mode')
     @classmethod
     def validate_stem_mode(cls, v):
-        if v is not None and v not in STEM_MODES:
-            return None  # Invalid modes are ignored
-        return v
+        return validate_stem_mode_value(v)
 
 
 class ConcurrencyRequest(BaseModel):
@@ -47,16 +65,12 @@ class ConfigUpdateRequest(BaseModel):
     @field_validator('demucs_model')
     @classmethod
     def validate_model(cls, v):
-        if v is not None and v not in DEMUCS_MODELS:
-            return None
-        return v
+        return validate_model_value(v)
 
     @field_validator('stem_mode')
     @classmethod
     def validate_stem_mode(cls, v):
-        if v is not None and v not in STEM_MODES:
-            return None
-        return v
+        return validate_stem_mode_value(v)
 
 
 class ModelDownloadRequest(BaseModel):
@@ -66,6 +80,4 @@ class ModelDownloadRequest(BaseModel):
     @field_validator('model')
     @classmethod
     def validate_model(cls, v):
-        if v not in DEMUCS_MODELS:
-            raise ValueError(f"Unknown model: {v}")
-        return v
+        return validate_model_value_strict(v)

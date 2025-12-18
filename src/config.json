@@ -1,8 +1,7 @@
 {
-  "output_dir": "/Users/will/Documents/Music/splits",
+  "output_dir": "/Users/will/Desktop",
   "default_folder": "",
-  "max_concurrency": 6,
+  "max_concurrency": 4,
   "demucs_model": "htdemucs",
-  "stem_mode": "4",
-  "category": "sets"
+  "stem_mode": "4"
 }

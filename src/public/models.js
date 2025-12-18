@@ -98,6 +98,27 @@ export async function handleModelChange(model) {
     window.__modelsData.current_model = model;
   }
 
+  // If switching away from htdemucs_6s while stem mode is "6", drop to "4"
+  // (only htdemucs_6s supports 6 stems)
+  if (model !== "htdemucs_6s") {
+    const stemSelect = $("#cfg-stem-mode");
+    if (stemSelect && stemSelect.value === "6") {
+      stemSelect.value = "4";
+      // Update local state
+      if (window.__modelsData) {
+        window.__modelsData.stem_modes.forEach(m => m.is_selected = m.id === "4");
+        window.__modelsData.current_stem_mode = "4";
+      }
+      // Update UI
+      updateStemChips();
+      // Persist stem mode change
+      api("/api/config", {
+        method: "POST",
+        body: JSON.stringify({ stem_mode: "4" }),
+      }).catch(e => console.error("Failed to update stem mode config:", e));
+    }
+  }
+
   // Check if model needs download
   const modelData = window.__modelsData?.models.find(m => m.name === model);
   const needsDownload = modelData && !modelData.downloaded;

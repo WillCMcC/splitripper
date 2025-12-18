@@ -13,13 +13,10 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 
 from lib.config import get_default_desktop_path
-from lib.constants import AUDIO_EXTENSIONS
+from lib.constants import AUDIO_EXTENSIONS_WITH_DOT
 from lib.state import app_state
 
 router = APIRouter()
-
-# Convert frozenset to set with dots for file suffix matching
-AUDIO_EXTENSIONS_WITH_DOT = {f".{ext}" for ext in AUDIO_EXTENSIONS}
 
 
 @router.get("/scan-directory")

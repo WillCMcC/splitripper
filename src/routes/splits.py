@@ -11,15 +11,12 @@ from typing import List, Dict, Any
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-from lib.constants import AUDIO_EXTENSIONS
+from lib.constants import AUDIO_EXTENSIONS_WITH_DOT
 from lib.logging_config import get_logger
 from lib.state import app_state
 
 router = APIRouter()
 logger = get_logger("routes.splits")
-
-# Convert frozenset to set with dots for file suffix matching
-AUDIO_EXTENSIONS_WITH_DOT = {f".{ext}" for ext in AUDIO_EXTENSIONS}
 
 
 def scan_splits_directory(output_dir: str) -> List[Dict[str, Any]]:

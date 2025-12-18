@@ -86,7 +86,11 @@ function registerIpcHandlers() {
         let dirCount = 0;
 
         // Recursive walk function
-        function walkDir(dir) {
+        function walkDir(dir, maxDepth = 10, currentDepth = 0) {
+          if (currentDepth >= maxDepth) {
+            return; // Stop recursion at max depth
+          }
+
           try {
             const files = fs.readdirSync(dir);
             dirCount++;
@@ -97,7 +101,7 @@ function registerIpcHandlers() {
                 const stat = fs.statSync(filePath);
 
                 if (stat.isDirectory()) {
-                  walkDir(filePath); // Recurse into subdirectory
+                  walkDir(filePath, maxDepth, currentDepth + 1); // Recurse into subdirectory
                 } else if (stat.isFile()) {
                   fileCount++;
                   if (file === name) {

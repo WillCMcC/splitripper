@@ -180,7 +180,7 @@ def run_demucs_separation(
         app_state.register_process(item.id, proc)
 
         last_progress = 0.0
-        error_lines = []
+        output_lines = []
 
         # Use a thread to read stdout - this prevents blocking issues on macOS
         # when the subprocess finishes but we're waiting on readline()
@@ -263,7 +263,7 @@ def run_demucs_separation(
                 line = line.strip()
                 if line:
                     logger.debug(f"[DEMUCS] {line}")
-                    error_lines.append(line)
+                    output_lines.append(line)
 
                     # Update progress
                     prog, eta_sec = parse_demucs_progress(line)
@@ -305,7 +305,7 @@ def run_demucs_separation(
         logger.info(f"Demucs process finished with return code: {proc.returncode}")
 
         if proc.returncode != 0:
-            error_msg = "\n".join(error_lines[-5:]) if error_lines else "demucs failed"
+            error_msg = "\n".join(output_lines[-5:]) if output_lines else "demucs failed"
             logger.error(f"Demucs failed: {error_msg}")
             return None, error_msg[:300]
 

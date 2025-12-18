@@ -197,8 +197,8 @@ def api_stop():
     for proc in app_state.get_active_processes():
         try:
             proc.terminate()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to terminate process: {e}")
 
     return {"stopping": True}
 

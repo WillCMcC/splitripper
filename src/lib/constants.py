@@ -37,6 +37,9 @@ PROCESSING_UPDATE_THROTTLE = 0.3
 # Audio file extensions (without dots - add dots when matching file suffixes)
 AUDIO_EXTENSIONS = frozenset(["mp3", "wav", "flac", "aac", "m4a", "ogg", "opus", "wma"])
 
+# Audio file extensions with dots for file suffix matching
+AUDIO_EXTENSIONS_WITH_DOT = {f".{ext}" for ext in AUDIO_EXTENSIONS}
+
 # Supported download formats (in order of preference)
 DOWNLOAD_AUDIO_FORMATS = ["mp3", "m4a", "webm", "wav", "opus"]
 

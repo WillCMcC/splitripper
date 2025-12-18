@@ -96,38 +96,38 @@ def _fetch_listing(
 
 
 @router.get("/search")
-def api_search(q: str, max: int = 100, requestId: Optional[str] = None):
+def api_search(q: str, max: int = 100, request_id: Optional[str] = None):
     """Search YouTube for videos."""
-    if requestId:
-        app_state.set_progress(requestId, "listing", message="Searching...")
+    if request_id:
+        app_state.set_progress(request_id, "listing", message="Searching...")
     max = max if 1 <= max <= 500 else 100
     results = search_youtube(q, max_results=max)
-    if requestId:
+    if request_id:
         app_state.update_progress(
-            requestId,
+            request_id,
             current=len(results),
             total=len(results),
             message=f"Found {len(results)} results",
         )
-        app_state.finish_progress(requestId)
+        app_state.finish_progress(request_id)
     return {"items": results}
 
 
 @router.get("/related")
-def api_related(id: str, max: int = 50, requestId: Optional[str] = None):
+def api_related(id: str, max: int = 50, request_id: Optional[str] = None):
     """Get related videos for a given video ID."""
-    if requestId:
-        app_state.set_progress(requestId, "listing", message="Fetching related...")
+    if request_id:
+        app_state.set_progress(request_id, "listing", message="Fetching related...")
     max = max if 1 <= max <= 100 else 50
     results = get_related_videos(id, max_results=max)
-    if requestId:
+    if request_id:
         app_state.update_progress(
-            requestId,
+            request_id,
             current=len(results),
             total=len(results),
             message=f"Found {len(results)} related",
         )
-        app_state.finish_progress(requestId)
+        app_state.finish_progress(request_id)
     return {"items": results}
 
 
@@ -141,31 +141,31 @@ def api_video_info(url: str):
 
 
 @router.get("/playlist")
-def api_playlist(url: str, max: Optional[int] = None, requestId: Optional[str] = None):
+def api_playlist(url: str, max: Optional[int] = None, request_id: Optional[str] = None):
     """Fetch playlist entries."""
     limit = min(max or PLAYLIST_HARD_CAP, PLAYLIST_HARD_CAP)
-    return _fetch_listing(url, limit, requestId, "playlist")
+    return _fetch_listing(url, limit, request_id, "playlist")
 
 
 @router.get("/channel")
 def api_channel(
-    channelUrl: Optional[str] = None,
-    channelId: Optional[str] = None,
+    channel_url: Optional[str] = None,
+    channel_id: Optional[str] = None,
     max: Optional[int] = None,
-    requestId: Optional[str] = None,
+    request_id: Optional[str] = None,
 ):
     """Fetch channel uploads."""
     # Normalize URL
     target = None
-    if channelUrl:
-        target = channelUrl
+    if channel_url:
+        target = channel_url
         if not re.search(r"/videos($|[/?])", target):
             if re.search(r"youtube\.com/(?:@|channel/)", target):
                 target = re.sub(r"/+$", "", target) + "/videos"
-    elif channelId:
-        target = f"https://www.youtube.com/channel/{channelId}/videos"
+    elif channel_id:
+        target = f"https://www.youtube.com/channel/{channel_id}/videos"
     else:
-        raise HTTPException(400, "channelUrl or channelId required")
+        raise HTTPException(400, "channel_url or channel_id required")
 
     limit = min(max or PLAYLIST_HARD_CAP, PLAYLIST_HARD_CAP)
-    return _fetch_listing(target, limit, requestId, "channel")
+    return _fetch_listing(target, limit, request_id, "channel")

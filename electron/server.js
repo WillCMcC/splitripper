@@ -10,6 +10,7 @@ const http = require("http");
 const kill = require("tree-kill");
 const fs = require("fs");
 const net = require("net");
+const { buildServerEnvironment } = require("./server-env");
 
 // Module state
 let serverProcess = null;
@@ -49,7 +50,6 @@ async function startServer() {
   console.log("Starting FastAPI server...");
 
   const isDev = !app.isPackaged;
-  let pythonPath, serverPath, workingDir;
 
   // Choose a free localhost port and prepare environment
   const port = await getFreePort().catch(() => 9000);
@@ -74,165 +74,40 @@ async function startServer() {
     console.warn("Could not initialize server log:", e);
   }
 
-  if (isDev) {
-    const isWindows = process.platform === "win32";
-    // Prefer bundled Python runtime if present for dev to avoid env issues
-    serverPath = path.join(rootDir, "src", "server.py");
-    workingDir = rootDir;
+  // Build platform-specific environment configuration
+  const serverConfig = buildServerEnvironment(isDev, baseEnv);
 
-    console.log(`Running in development mode`);
-
-    const bundledPython = path.join(
-      rootDir,
-      "python_runtime_bundle",
-      isWindows ? "python.exe" : "python"
-    );
-    if (fs.existsSync(bundledPython)) {
-      pythonPath = bundledPython;
-      console.log(`Using bundled Python with server at: ${serverPath}`);
-      serverProcess = spawn(pythonPath, [serverPath], {
-        cwd: workingDir,
-        stdio: "pipe",
-        env: { ...baseEnv },
-      });
-    } else {
-      // Fallbacks: try conda, then system python
-      console.log(`Bundled Python not found, trying conda/system python`);
-      pythonPath = "conda";
-      serverProcess = spawn(
-        pythonPath,
-        ["run", "-n", "base", "python", serverPath],
-        {
-          cwd: workingDir,
-          stdio: "pipe",
-          env: { ...baseEnv },
-        }
-      );
-      // Note: if 'conda' is not available, an 'error' event will be emitted below.
-    }
-  } else {
-    // Production: Use bundled Python runtime
-    const isWindows = process.platform === "win32";
-    const isMac = process.platform === "darwin";
-
-    // Determine the correct Python executable name
-    let pythonExe;
-    if (isWindows) {
-      pythonExe = "python.exe";
-    } else {
-      // On Unix-like systems (macOS/Linux), use the wrapper script
-      pythonExe = "python";
-    }
-
-    // The bundled Python is in the app resources
-    pythonPath = path.join(
-      process.resourcesPath,
-      "app",
-      "python_runtime_bundle",
-      pythonExe
-    );
-    serverPath = path.join(process.resourcesPath, "app", "src", "server.py");
-    workingDir = path.join(process.resourcesPath, "app");
-
-    console.log(`Running in production mode`);
-    console.log(`Platform: ${process.platform}`);
-    console.log(`Python path: ${pythonPath}`);
-    console.log(`Python exists: ${fs.existsSync(pythonPath)}`);
-    console.log(`Server path: ${serverPath}`);
-    console.log(`Server exists: ${fs.existsSync(serverPath)}`);
-    console.log(`Working directory: ${workingDir}`);
-
-    // Check if files exist
-    if (!fs.existsSync(pythonPath)) {
-      console.error(`Python wrapper not found at: ${pythonPath}`);
-      app.quit();
-      return;
-    }
-
-    if (!fs.existsSync(serverPath)) {
-      console.error(`Server script not found at: ${serverPath}`);
-      app.quit();
-      return;
-    }
-
-    // Simple environment for the wrapper script
-    const env = { ...baseEnv };
-
-    // Ensure PBS relocatable CPython finds its stdlib/site correctly on macOS
-    const bundleDir = path.join(
-      process.resourcesPath,
-      "app",
-      "python_runtime_bundle"
-    );
-    const pbsHome = path.join(bundleDir, "pbs", "python");
-    const denoDir = path.join(bundleDir, "deno");
-    const ffmpegDir = path.join(bundleDir, "ffmpeg");
-
-    if (isMac) {
-      env.PYTHONHOME = pbsHome;
-    }
-
-    // Add Deno and ffmpeg to PATH for EJS support
-    if (fs.existsSync(denoDir)) {
-      env.PATH = `${denoDir}${path.delimiter}${env.PATH || ""}`;
-    }
-    if (fs.existsSync(ffmpegDir)) {
-      env.PATH = `${ffmpegDir}${path.delimiter}${env.PATH || ""}`;
-    }
-
-    // For macOS, ensure the wrapper script is executable
-    if (isMac) {
-      try {
-        fs.chmodSync(pythonPath, "755");
-      } catch (e) {
-        console.warn("Could not set executable permissions:", e);
-      }
-    }
-
-    // For Windows, set up the Python environment
-    if (isWindows) {
-      const winBundleDir = path.join(
-        process.resourcesPath,
-        "app",
-        "python_runtime_bundle"
-      );
-      const winDenoDir = path.join(winBundleDir, "deno");
-      const winFfmpegDir = path.join(winBundleDir, "ffmpeg");
-
-      env.PYTHONHOME = winBundleDir;
-      env.PATH = `${winBundleDir};${winBundleDir}\\Scripts`;
-
-      // Add Deno and ffmpeg to PATH for EJS support
-      if (fs.existsSync(winDenoDir)) {
-        env.PATH = `${winDenoDir};${env.PATH}`;
-      }
-      if (fs.existsSync(winFfmpegDir)) {
-        env.PATH = `${winFfmpegDir};${env.PATH}`;
-      }
-
-      env.PATH = `${env.PATH};${process.env.PATH || ""}`;
-    }
-
-    serverProcess = spawn(pythonPath, [serverPath], {
-      cwd: workingDir,
-      stdio: "pipe",
-      env: env,
-      shell: false,
-      detached: false,
-    });
+  if (!serverConfig) {
+    // Configuration failed (app.quit() already called)
+    return;
   }
+
+  const { pythonPath, serverPath, workingDir, env, args } = serverConfig;
+
+  // Spawn the server process
+  serverProcess = spawn(pythonPath, args, {
+    cwd: workingDir,
+    stdio: "pipe",
+    env: env,
+    shell: false,
+    detached: false,
+  });
 
   serverProcess.stdout.on("data", (data) => {
     try {
       if (serverLogStream) serverLogStream.write(data);
-    } catch {}
+    } catch (e) {
+      console.warn("Failed to write to server log stream:", e.message);
+    }
     console.log(`Server: ${data}`);
   });
 
   serverProcess.stderr.on("data", (data) => {
     try {
       if (serverLogStream) serverLogStream.write(data);
-    } catch {}
+    } catch (e) {
+      console.warn("Failed to write to server log stream:", e.message);
+    }
     console.error(`Server Error: ${data}`);
   });
 
@@ -250,7 +125,9 @@ async function startServer() {
         serverLogStream.end();
         serverLogStream = null;
       }
-    } catch {}
+    } catch (e) {
+      console.warn("Failed to close server log stream:", e.message);
+    }
 
     // Check if this was an unexpected exit (crash)
     if (code !== 0 && !stoppingServer) {
@@ -317,7 +194,9 @@ function requestShutdown(timeoutMs = 400) {
         (res) => {
           try {
             res.resume();
-          } catch {}
+          } catch (e) {
+            console.warn("Failed to resume shutdown response:", e.message);
+          }
           resolve();
         }
       );
@@ -325,11 +204,14 @@ function requestShutdown(timeoutMs = 400) {
       req.on("timeout", () => {
         try {
           req.destroy();
-        } catch {}
+        } catch (e) {
+          console.warn("Failed to destroy timed-out request:", e.message);
+        }
         resolve();
       });
       req.end();
-    } catch {
+    } catch (e) {
+      console.warn("Failed to send shutdown request:", e.message);
       resolve();
     }
   });
