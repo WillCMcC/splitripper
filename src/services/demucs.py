@@ -17,6 +17,8 @@ from typing import Dict, Optional, Tuple
 from lib.constants import (
     DEMUCS_MODELS,
     DEFAULT_DEMUCS_MODEL,
+    DEFAULT_QUALITY_PRESET,
+    QUALITY_PRESETS,
     STEM_MODES,
     DEFAULT_STEM_MODE,
 )
@@ -65,15 +67,65 @@ def parse_demucs_progress(line: str) -> Tuple[Optional[float], Optional[int]]:
         return None, None
 
 
+class MultiPassProgressTracker:
+    """
+    Track progress across multiple Demucs passes (when using --shifts).
+
+    With --shifts N, Demucs runs N separate passes, each showing its own
+    0-100% progress bar. This class detects pass boundaries and calculates
+    overall progress as: (completed_passes + current_pass_progress) / total_passes
+    """
+
+    def __init__(self, num_passes: int):
+        self.num_passes = max(1, num_passes)
+        self.completed_passes = 0
+        self.current_pass_progress = 0.0
+        self.last_raw_progress = 0.0
+        self.seen_high_progress = False  # Have we seen progress > 50% in current pass?
+
+    def update(self, raw_progress: float) -> float:
+        """
+        Update with raw progress from a single pass and return overall progress.
+
+        Detects pass boundaries by watching for progress to reset from high to low.
+        """
+        if raw_progress is None:
+            return self.get_overall_progress()
+
+        # Detect pass boundary: progress drops significantly after reaching high values
+        if self.seen_high_progress and raw_progress < 0.2 and self.last_raw_progress > 0.8:
+            self.completed_passes = min(self.completed_passes + 1, self.num_passes - 1)
+            self.seen_high_progress = False
+            logger.debug(f"Detected pass boundary, now on pass {self.completed_passes + 1}/{self.num_passes}")
+
+        # Track if we've seen high progress in this pass
+        if raw_progress > 0.5:
+            self.seen_high_progress = True
+
+        self.current_pass_progress = raw_progress
+        self.last_raw_progress = raw_progress
+
+        return self.get_overall_progress()
+
+    def get_overall_progress(self) -> float:
+        """Calculate overall progress across all passes."""
+        if self.num_passes <= 1:
+            return min(0.99, self.current_pass_progress)
+
+        overall = (self.completed_passes + self.current_pass_progress) / self.num_passes
+        return min(0.99, overall)
+
+
 def run_demucs_separation(
     audio_file: Path,
     output_dir: Path,
     item: QueueItem,
     model: Optional[str] = None,
     stem_mode: Optional[str] = None,
+    quality_preset: Optional[str] = None,
 ) -> Tuple[Optional[Dict[str, Path]], Optional[str]]:
     """
-    Run Demucs separation with configurable model and stem mode.
+    Run Demucs separation with configurable model, stem mode, and quality.
 
     Args:
         audio_file: Path to input audio file
@@ -81,6 +133,7 @@ def run_demucs_separation(
         item: QueueItem for progress tracking
         model: Demucs model name (defaults to config setting)
         stem_mode: "2", "4", or "6" stem separation (defaults to config setting)
+        quality_preset: "normal" or "high" (defaults to config setting)
 
     Returns:
         Tuple of (dict mapping stem names to paths, error_message_if_any)
@@ -95,26 +148,38 @@ def run_demucs_separation(
     env["OMP_NUM_THREADS"] = "4"
     env["MKL_NUM_THREADS"] = "4"
 
-    # Get model and stem mode from config if not specified
+    # Get model, stem mode, and quality preset from config if not specified
     if model is None:
         model = app_state.get_config_value("demucs_model", DEFAULT_DEMUCS_MODEL)
     if stem_mode is None:
         stem_mode = item.stem_mode or app_state.get_config_value(
             "stem_mode", DEFAULT_STEM_MODE
         )
+    if quality_preset is None:
+        quality_preset = app_state.get_config_value(
+            "quality_preset", DEFAULT_QUALITY_PRESET
+        )
 
-    # Validate model and stem_mode
+    # Validate model, stem_mode, and quality_preset
     if model not in DEMUCS_MODELS:
         model = DEFAULT_DEMUCS_MODEL
     if stem_mode not in STEM_MODES:
         stem_mode = DEFAULT_STEM_MODE
+    if quality_preset not in QUALITY_PRESETS:
+        quality_preset = DEFAULT_QUALITY_PRESET
+
+    # Get quality preset configuration
+    preset_config = QUALITY_PRESETS[quality_preset]
 
     # 6-stem mode requires htdemucs_6s
     stem_config = STEM_MODES[stem_mode]
     if stem_config.get("requires_model"):
         model = stem_config["requires_model"]
 
-    logger.info(f"Demucs separation: model={model}, stem_mode={stem_mode}")
+    logger.info(
+        f"Demucs separation: model={model}, stem_mode={stem_mode}, "
+        f"quality={quality_preset} (shifts={preset_config['shifts']}, overlap={preset_config['overlap']})"
+    )
 
     # Add ffmpeg to path if bundled
     ffmpeg_dir = BASE_DIR.parent / "python_runtime_bundle" / "ffmpeg"
@@ -157,6 +222,11 @@ def run_demucs_separation(
                 ["--segment", "10"]
             )  # Process in 10-second chunks to reduce memory
 
+        # Add quality preset flags (--shifts and --overlap)
+        if preset_config["shifts"] > 0:
+            cmd.extend(["--shifts", str(preset_config["shifts"])])
+        cmd.extend(["--overlap", str(preset_config["overlap"])])
+
         # Add two-stems flag for 2-stem mode
         if stem_mode == "2":
             cmd.extend(["--two-stems", "vocals"])
@@ -178,6 +248,11 @@ def run_demucs_separation(
 
         # Register process for cleanup on stop
         app_state.register_process(item.id, proc)
+
+        # Create multi-pass progress tracker for HD mode
+        # With --shifts N, Demucs runs N separate passes
+        num_passes = preset_config["shifts"] if preset_config["shifts"] > 0 else 1
+        progress_tracker = MultiPassProgressTracker(num_passes)
 
         last_progress = 0.0
         output_lines = []
@@ -266,15 +341,20 @@ def run_demucs_separation(
                     output_lines.append(line)
 
                     # Update progress
-                    prog, eta_sec = parse_demucs_progress(line)
-                    if prog is not None and prog > last_progress:
-                        last_progress = prog
-                        with app_state.lock:
-                            item.progress = prog
-                            item.processing = True
-                            item.downloaded = True
-                            if eta_sec is not None:
-                                item.processing_eta_sec = int(eta_sec)
+                    raw_prog, eta_sec = parse_demucs_progress(line)
+                    if raw_prog is not None:
+                        # Use multi-pass tracker to calculate overall progress
+                        overall_prog = progress_tracker.update(raw_prog)
+                        if overall_prog > last_progress:
+                            last_progress = overall_prog
+                            with app_state.lock:
+                                item.progress = overall_prog
+                                item.processing = True
+                                item.downloaded = True
+                                if eta_sec is not None:
+                                    # Scale ETA by remaining passes
+                                    remaining_passes = num_passes - progress_tracker.completed_passes
+                                    item.processing_eta_sec = int(eta_sec * remaining_passes)
             except queue.Empty:
                 # No output available - loop will check poll() on next iteration
                 pass

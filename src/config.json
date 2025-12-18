@@ -1,7 +1,9 @@
 {
-  "output_dir": "/Users/will/Desktop",
+  "output_dir": "/Users/will/Desktop/HDTest",
   "default_folder": "",
-  "max_concurrency": 4,
+  "max_concurrency": 6,
   "demucs_model": "htdemucs",
-  "stem_mode": "4"
+  "stem_mode": "4",
+  "quality_preset": "high",
+  "hd_upscaling": true
 }

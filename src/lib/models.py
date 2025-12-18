@@ -1,7 +1,7 @@
 """Pydantic models for API request/response validation."""
 from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator
-from lib.constants import AUDIO_EXTENSIONS, DEMUCS_MODELS, STEM_MODES
+from lib.constants import AUDIO_EXTENSIONS, DEMUCS_MODELS, QUALITY_PRESETS, STEM_MODES
 
 
 # Shared validator functions
@@ -23,6 +23,13 @@ def validate_model_value_strict(v: str) -> str:
     """Validate demucs_model with strict error raising."""
     if v not in DEMUCS_MODELS:
         raise ValueError(f"Unknown model: {v}")
+    return v
+
+
+def validate_quality_preset_value(v: Optional[str]) -> Optional[str]:
+    """Validate quality_preset against QUALITY_PRESETS constants."""
+    if v is not None and v not in QUALITY_PRESETS:
+        return None  # Invalid presets are ignored
     return v
 
 
@@ -61,6 +68,7 @@ class ConfigUpdateRequest(BaseModel):
     default_folder: Optional[str] = None
     demucs_model: Optional[str] = None
     stem_mode: Optional[str] = None
+    quality_preset: Optional[str] = None
 
     @field_validator('demucs_model')
     @classmethod
@@ -71,6 +79,11 @@ class ConfigUpdateRequest(BaseModel):
     @classmethod
     def validate_stem_mode(cls, v):
         return validate_stem_mode_value(v)
+
+    @field_validator('quality_preset')
+    @classmethod
+    def validate_quality_preset(cls, v):
+        return validate_quality_preset_value(v)
 
 
 class ModelDownloadRequest(BaseModel):

@@ -129,3 +129,26 @@ STEM_MODES = {
 
 # Default stem mode
 DEFAULT_STEM_MODE = "2"
+
+# =============================================================================
+# Quality Presets
+# =============================================================================
+
+# Quality presets control Demucs --shifts and --overlap parameters
+# Higher shifts = better quality but slower (each shift is a full pass)
+QUALITY_PRESETS = {
+    "normal": {
+        "label": "Normal",
+        "description": "Fast processing, good quality",
+        "shifts": 0,
+        "overlap": 0.25,
+    },
+    "high": {
+        "label": "High Quality",
+        "description": "Slower processing, best quality (~5x slower)",
+        "shifts": 5,
+        "overlap": 0.25,
+    },
+}
+
+DEFAULT_QUALITY_PRESET = "normal"

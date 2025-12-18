@@ -28,6 +28,9 @@ import { setupDirectoryPicker, setupTabs, setupSettingsSubtabs, setupYtdlpUpdate
 // Model management
 import { loadModelsConfig, setupQuickDownload, setupDownloadAll } from './models.js';
 
+// Quality presets and HD upscaling
+import { setupQualitySettings, setupMsgDownloadButton } from './quality.js';
+
 // Search handlers
 import { setupSearchHandlers, setRefreshQueue as setSearchRefreshQueue } from './search.js';
 
@@ -225,6 +228,8 @@ document.addEventListener("DOMContentLoaded", () => {
   setupQuickDownload();
   setupDownloadAll();
   loadModelsConfig();
+  setupQualitySettings();
+  setupMsgDownloadButton();
   setupSplits();
   boot();
 });
