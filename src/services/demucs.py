@@ -281,9 +281,6 @@ def run_demucs_separation(
         start_time = time.time()
         last_status_log = start_time
         DRAIN_TIMEOUT = 3.0  # Seconds to drain queue after process exits
-        MAX_TIMEOUT = (
-            3600.0  # 1 hour max - htdemucs_ft on CPU can be slow for long songs
-        )
         STATUS_LOG_INTERVAL = 30.0  # Log status every 30 seconds
 
         while True:
@@ -296,17 +293,6 @@ def run_demucs_separation(
                     f"progress={last_progress:.2f}, queue_size={output_queue.qsize()}"
                 )
                 last_status_log = now
-
-            # Check for overall timeout to prevent infinite hangs
-            elapsed = time.time() - start_time
-            if elapsed > MAX_TIMEOUT:
-                logger.error(
-                    f"Demucs overall timeout reached ({MAX_TIMEOUT}s), killing process"
-                )
-                proc.kill()
-                proc.wait()
-                app_state.unregister_process(item.id)
-                return None, f"Demucs timed out after {int(elapsed)}s"
 
             # Check for stop event (user cancelled)
             if app_state.stop_event.is_set():
@@ -372,12 +358,7 @@ def run_demucs_separation(
 
         # Now wait for process (should already be done)
         logger.info(f"Waiting for process to finish (poll={proc.poll()})...")
-        try:
-            proc.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            logger.warning("Process didn't exit cleanly after 10s, killing...")
-            proc.kill()
-            proc.wait()
+        proc.wait()
 
         # Unregister process from cleanup list
         app_state.unregister_process(item.id)

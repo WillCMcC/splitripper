@@ -193,7 +193,7 @@ def _download_model_sync(model_name: str, python_exe: str, env: dict) -> dict:
         ]
 
         logger.info(f"Downloading model {model_name}...")
-        proc = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=600)
+        proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
 
         # Cleanup
         try:
