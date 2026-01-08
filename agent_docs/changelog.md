@@ -2,6 +2,12 @@
 
 Version history and recent improvements to SplitBoy.
 
+## v1.2.5 - Test Fixes
+
+### Testing
+- Fixed worker tests that weren't properly mocking app_state
+- Tests now correctly patch services.worker.app_state for isolation
+
 ## v1.2.4 - HD Mode
 
 ### New Features

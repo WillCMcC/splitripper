@@ -154,10 +154,11 @@ class TestProcessYouTubeItem:
         # Set the stop event
         mock_app_state.stop_event.set()
 
-        # Mock yt_dlp
+        # Mock yt_dlp and patch app_state in worker module
         mock_ytdl = MagicMock()
         with patch.dict("sys.modules", {"yt_dlp": mock_ytdl}):
-            _process_youtube_item(item)
+            with patch("services.worker.app_state", mock_app_state):
+                _process_youtube_item(item)
 
         assert item.status == "canceled"
         mock_app_state.stop_event.clear()
@@ -186,8 +187,9 @@ class TestDownloadWorker:
             it.progress = 1.0
             mock_app_state.decrement_active()
 
-        with patch("services.worker._process_item", side_effect=mock_process):
-            download_worker()
+        with patch("services.worker.app_state", mock_app_state):
+            with patch("services.worker._process_item", side_effect=mock_process):
+                download_worker()
 
         assert item.status == "done"
 
@@ -195,6 +197,9 @@ class TestDownloadWorker:
         """Test that worker stops when stop_event is set."""
         from lib.state import QueueItem
         from services.worker import download_worker
+
+        # Set max_concurrency to 1 so items are processed sequentially
+        mock_app_state.max_concurrency = 1
 
         # Add queued items
         for i in range(3):
@@ -206,13 +211,26 @@ class TestDownloadWorker:
             )
             mock_app_state.add_to_queue(item)
 
-        # Set stop event immediately
-        mock_app_state.stop_event.set()
+        # Mock _process_item to set stop event on first call
+        call_count = [0]
 
-        download_worker()
+        def mock_process(it):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # Set stop event during first item processing
+                mock_app_state.stop_event.set()
+            it.status = "done"
+            it.progress = 1.0
+            mock_app_state.decrement_active()
 
-        # All items should be canceled
-        for item in mock_app_state.get_queue_items():
+        with patch("services.worker.app_state", mock_app_state):
+            with patch("services.worker._process_item", side_effect=mock_process):
+                download_worker()
+
+        # First item was processed, remaining should be canceled
+        items = mock_app_state.get_queue_items()
+        assert items[0].status == "done"
+        for item in items[1:]:
             assert item.status == "canceled"
 
         mock_app_state.stop_event.clear()
@@ -245,9 +263,10 @@ class TestDownloadWorker:
             it.progress = 1.0
             mock_app_state.decrement_active()
 
-        with patch("services.worker._process_item", side_effect=mock_process):
-            with patch("time.sleep", return_value=None):  # Speed up the test
-                download_worker()
+        with patch("services.worker.app_state", mock_app_state):
+            with patch("services.worker._process_item", side_effect=mock_process):
+                with patch("time.sleep", return_value=None):  # Speed up the test
+                    download_worker()
 
         # Active count should never exceed max_concurrency
         assert all(c <= 2 for c in active_count)
