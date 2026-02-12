@@ -2,6 +2,14 @@
 
 Version history and recent improvements to SplitBoy.
 
+## v1.2.6 - yt-dlp Auto-Update Fix
+
+### Bug Fixes
+- Fixed yt-dlp auto-updater failing silently in production builds (pip is stripped from the bundle)
+- Auto-updater now installs to a user-writable directory (`~/Library/Application Support/SplitBoy/packages/`)
+- Falls back to downloading the yt-dlp wheel directly from PyPI when pip is unavailable
+- Updated yt-dlp to fix YouTube 403 errors
+
 ## v1.2.5 - Test Fixes
 
 ### Testing
